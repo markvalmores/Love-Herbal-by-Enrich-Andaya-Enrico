@@ -61,7 +61,7 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       sender: "bot",
-      text: "Yay! Welcome explorer! I am Usagyuun, your VTuber wellness guide! Let's find your perfect Enrico Andaya formulation today. Ask me anything! Ja Na Matta Ne!",
+      text: "Yay! Welcome explorer! I am Usagyuun, your VTuber wellness guide! Let's find your perfect Enrico Andaya formulation today. Ask me anything! Stay healthy!",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -380,14 +380,14 @@ export default function App() {
       const data = await res.json();
       const botMsg: ChatMessage = {
         sender: "bot",
-        text: data.reply || "I am processing your wellness question. Ja Na Matta Ne!",
+        text: data.reply || "I am processing your wellness question. Stay healthy!",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setChatMessages(prev => [...prev, botMsg]);
     } catch (err) {
       const errMsg: ChatMessage = {
         sender: "bot",
-        text: "I had a tiny disconnect, but Usagyuun is back! Ask me anything about Enrico Andaya's formulas. Ja Na Matta Ne!",
+        text: "I had a tiny disconnect, but Usagyuun is back! Ask me anything about Enrico Andaya's formulas. Stay healthy!",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setChatMessages(prev => [...prev, errMsg]);
@@ -1566,7 +1566,7 @@ export default function App() {
                   🐰🌸
                 </div>
                 <div className="bg-emerald-50 text-emerald-800 px-4 py-3 rounded-2xl border border-emerald-100 text-sm font-semibold font-display inline-block max-w-[90%]">
-                  "Thank you for your Purchase! Come Again, Ja Na Matta Ne."
+                  "Thank you for your Purchase! Come again soon."
                 </div>
               </div>
 
@@ -1685,7 +1685,7 @@ export default function App() {
                 </div>
 
                 <div className="text-center pt-4 border-t border-dashed border-slate-300 space-y-1">
-                  <p className="text-[11px] font-bold text-slate-900">"Come Again, Ja Na Matta Ne!"</p>
+                  <p className="text-[11px] font-bold text-slate-900">"Come Again Soon!"</p>
                   <p className="text-[9px] text-slate-400">Love Herbal Personalized Wellness journey</p>
                 </div>
               </div>

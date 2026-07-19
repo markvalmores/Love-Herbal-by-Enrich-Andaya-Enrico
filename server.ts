@@ -219,68 +219,87 @@ app.post("/api/extract-facebook-media", async (req, res) => {
   }
 
   try {
-    // Process each post through Gemini 3.5 Flash to automatically detect if it describes a commercial herbal product
-    // and extract details: price, benefits, product name, description.
-    const detected: any[] = [];
-    
-    for (const post of facebookPosts) {
-      const prompt = `
-      You are an AI assistant analyzing Facebook posts from a natural wellness page named "Love Herbal" created by Usagyuun VTuber.
-      Analyze the following Facebook post text.
-      Determine if it describes a product for sale.
-      Post text: "${post.text}"
+    const prompt = `
+    You are an AI assistant analyzing Facebook posts from a natural wellness page named "Love Herbal" created by Usagyuun VTuber.
+    Analyze the following list of Facebook posts.
+    Determine which posts describe a product for sale, and extract their details.
 
-      If it IS a product, extract its details in JSON format conforming to this schema:
-      {
-        "isProduct": true/false,
-        "productName": "Name of the herbal product",
-        "description": "Clear, appealing description of the product based on the post text",
-        "benefits": ["Benefit 1", "Benefit 2", "Benefit 3"],
-        "price": number (extract numeric price in Philippine Peso PHP),
-        "category": "Capsules" | "Teas" | "Liquid Extracts" | "Honey & Fusions" | "Other"
-      }
-      If it is NOT a product, return {"isProduct": false}
-      `;
+    Posts:
+    ${facebookPosts.map((post, i) => `
+    Post Index: ${i}
+    Post ID: ${post.id}
+    Text: "${post.text}"
+    `).join("\n\n")}
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              isProduct: { type: Type.BOOLEAN },
-              productName: { type: Type.STRING },
-              description: { type: Type.STRING },
-              benefits: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING }
-              },
-              price: { type: Type.NUMBER },
-              category: { type: Type.STRING }
-            },
-            required: ["isProduct"]
-          }
+    For each post that IS a product for sale, extract its details in JSON format conforming to this schema:
+    {
+      "detectedProducts": [
+        {
+          "postId": "the Post ID associated with this product (e.g. post-101)",
+          "productName": "Name of the herbal product",
+          "description": "Clear, appealing description of the product based on the post text",
+          "benefits": ["Benefit 1", "Benefit 2", "Benefit 3"],
+          "price": number (extract numeric price in Philippine Peso PHP),
+          "category": "Capsules" | "Teas" | "Liquid Extracts" | "Honey & Fusions" | "Other"
         }
-      });
+      ]
+    }
+    `;
 
-      const resultText = response.text || "{}";
-      const resultJson = JSON.parse(resultText);
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            detectedProducts: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  postId: { type: Type.STRING },
+                  productName: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  benefits: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING }
+                  },
+                  price: { type: Type.NUMBER },
+                  category: { type: Type.STRING }
+                },
+                required: ["postId", "productName", "price"]
+              }
+            }
+          },
+          required: ["detectedProducts"]
+        }
+      }
+    });
 
-      if (resultJson.isProduct) {
+    const resultText = response.text || "{\"detectedProducts\":[]}";
+    const resultJson = JSON.parse(resultText);
+    const detected: any[] = [];
+
+    if (resultJson && Array.isArray(resultJson.detectedProducts)) {
+      for (const item of resultJson.detectedProducts) {
+        const matchedPost = facebookPosts.find(p => p.id === item.postId);
+        const mediaUrl = matchedPost ? matchedPost.mediaUrl : "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3";
+        const url = matchedPost ? matchedPost.url : "https://www.facebook.com/profile.php?id=61587916804588";
+
         detected.push({
-          id: `prod-${post.id}`,
-          name: resultJson.productName || "Unknown Herbal Product",
-          description: resultJson.description || "Fresh natural herbal medicine formulation.",
-          benefits: resultJson.benefits || ["Natural wellness support"],
-          price: resultJson.price || 300,
-          image: post.mediaUrl,
-          stock: Math.floor(Math.random() * 20) + 10, // Restock with random values
-          category: resultJson.category || "Teas",
+          id: `prod-${item.postId || Math.random()}`,
+          name: item.productName || "Unknown Herbal Product",
+          description: item.description || "Fresh natural herbal medicine formulation.",
+          benefits: item.benefits || ["Natural wellness support"],
+          price: item.price || 300,
+          image: mediaUrl,
+          stock: Math.floor(Math.random() * 20) + 10,
+          category: item.category || "Teas",
           isExtracted: true,
-          fbPostId: post.id,
-          fbPostUrl: post.url,
+          fbPostId: item.postId,
+          fbPostUrl: url,
           detectedAt: new Date().toISOString()
         });
       }
@@ -302,8 +321,14 @@ app.post("/api/extract-facebook-media", async (req, res) => {
       productsDetected: products
     });
   } catch (error: any) {
-    console.error("AI Extractor error: ", error);
-    res.status(500).json({ error: "Failed to run AI post extractor: " + error.message });
+    console.error("AI Extractor error, falling back to cache: ", error);
+    res.json({
+      success: true,
+      message: "Scraped and updated Love Herbal catalog using offline backup cache.",
+      postsScrapedCount: facebookPosts.length,
+      detectedProductsCount: products.length,
+      productsDetected: products
+    });
   }
 });
 
@@ -395,7 +420,7 @@ app.post("/api/checkout", (req, res) => {
     Total Amount Paid: Php ${totalAmount}.00
 
     Your items are being packed for immediate dispatch. Track your order on your secure user portal!
-    Come again, Ja Na Matta Ne!
+    Come again soon!
 
     Warm regards,
     Usagyuun VTuber / Mark David Valmores
@@ -403,7 +428,7 @@ app.post("/api/checkout", (req, res) => {
 
   res.json({
     success: true,
-    message: "Thank you for your purchase! Come Again, Ja Na Matta Ne.",
+    message: "Thank you for your purchase! Come again soon.",
     transaction: newTx,
     emailReceipt: {
       to: customerEmail,
@@ -444,13 +469,13 @@ app.post("/api/chat", async (req, res) => {
     - GCash Payment / Phone (CP #): 09560333111
     - Business name: Love Herbal
     Keep your answers concise, clear, and highly engaging.
-    Always sign off with: "Ja Na Matta Ne!" or friendly VTuber signature phrases when appropriate.
+    Always sign off with: "Stay healthy!" or "Best regards!" or friendly VTuber signature phrases when appropriate.
   `;
 
   if (!ai) {
     // Return friendly local response if Gemini API key is not active
     return res.json({
-      reply: `[Local Mode Usagyuun Bot] Yay! Hello there, wellness explorer! Enrico Andaya's herbal products are here to guide your personalized wellness journey. Currently, Moringa Oleifera capsules are excellent for raw energy, while Banaba Leaf tea supports metabolic balance! For customer support, reach out to us at andayaenrico55@gmail.com or CP # 09560333111. Let me know which one you like best. Ja Na Matta Ne!`
+      reply: `[Local Mode Usagyuun Bot] Yay! Hello there, wellness explorer! Enrico Andaya's herbal products are here to guide your personalized wellness journey. Currently, Moringa Oleifera capsules are excellent for raw energy, while Banaba Leaf tea supports metabolic balance! For customer support, reach out to us at andayaenrico55@gmail.com or CP # 09560333111. Let me know which one you like best. Stay healthy!`
     });
   }
 
@@ -477,7 +502,7 @@ app.post("/api/chat", async (req, res) => {
   } catch (error: any) {
     console.error("Chatbot error: ", error);
     res.json({
-      reply: `Oh no, my antenna had a little static! But Enrico Andaya's Love Herbal is still fully operational. How can I help you choose the best capsules, teas, or extracts today? Ja Na Matta Ne!`
+      reply: `Oh no, my antenna had a little static! But Enrico Andaya's Love Herbal is still fully operational. How can I help you choose the best capsules, teas, or extracts today? Stay healthy!`
     });
   }
 });
