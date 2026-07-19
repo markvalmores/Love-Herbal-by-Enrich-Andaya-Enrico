@@ -1,0 +1,6 @@
+{
+  "name": "Love Herbal",
+  "description": "A personalized wellness journey experience featuring herbal products, automated checkout with GCash/PayPal, digital receipts, and real-time inventory management. Developed by Usagyuun VTuber a.k.a Mark David Valmores.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
