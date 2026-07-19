@@ -8,7 +8,6 @@ import {
   CreditCard, 
   Mail, 
   FileText, 
-  Facebook, 
   Share2, 
   Check, 
   AlertTriangle, 
@@ -39,11 +38,6 @@ export default function App() {
   const [stockAlerts, setStockAlerts] = useState<string[]>([]);
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
   
-  // Facebook scraper trigger states
-  const [fbUrl, setFbUrl] = useState("https://www.facebook.com/profile.php?id=61587916804588");
-  const [scrapingStatus, setScrapingStatus] = useState<"idle" | "scraping" | "success" | "error">("idle");
-  const [scrapingMessage, setScrapingMessage] = useState("");
-
   // Notifications prompt state
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean | null>(null);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -147,35 +141,6 @@ export default function App() {
       console.error("Error fetching stats", e);
     } finally {
       setRefreshingDashboard(false);
-    }
-  };
-
-  // Scrape and extract Facebook Posts automatically using Gemini analysis
-  const triggerFacebookExtraction = async () => {
-    setScrapingStatus("scraping");
-    setScrapingMessage("Scraping Facebook Page media components...");
-    try {
-      const res = await fetch("/api/extract-facebook-media", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: fbUrl })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setScrapingStatus("success");
-        setScrapingMessage(data.message);
-        setProducts(data.productsDetected);
-        fetchDashboardStats();
-        
-        // Add alert notification
-        addSystemAlert("success", `AI parsed and updated Love Herbal catalog. ${data.detectedProductsCount} items aligned.`);
-      } else {
-        setScrapingStatus("error");
-        setScrapingMessage(data.error || "Failed to parse Facebook Page posts.");
-      }
-    } catch (err: any) {
-      setScrapingStatus("error");
-      setScrapingMessage("Network failure connection: " + err.message);
     }
   };
 
@@ -489,36 +454,13 @@ export default function App() {
             </div>
           </div>
 
-          {/* Scraper bar integrated cleanly for Facebook profile page */}
-          <div className="w-full md:w-auto max-w-md flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
-            <div className="flex items-center pl-3 text-slate-400">
-              <Facebook className="w-4 h-4 mr-2 text-blue-600 shrink-0" />
-              <span className="text-xs text-slate-500 font-mono truncate hidden lg:inline max-w-[120px]">
-                profile.php?id=61587916804588
-              </span>
+          {/* Verified Merchant Badge */}
+          <div className="flex items-center bg-emerald-50 rounded-xl px-4 py-2 border border-emerald-100 space-x-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <div className="flex flex-col">
+              <span className="text-[9px] uppercase font-mono text-emerald-700 font-bold leading-none">Verified Merchant Partner</span>
+              <span className="text-[11px] font-bold text-slate-900">Enrico Andaya / Love Herbal</span>
             </div>
-            <button
-              id="scrape-fb-action"
-              onClick={triggerFacebookExtraction}
-              disabled={scrapingStatus === "scraping"}
-              className={`ml-auto px-4 py-2 text-xs font-medium rounded-lg shadow-sm transition-all flex items-center space-x-1.5 ${
-                scrapingStatus === "scraping" 
-                  ? "bg-slate-300 text-slate-600 cursor-not-allowed" 
-                  : "bg-emerald-600 hover:bg-emerald-700 text-white"
-              }`}
-            >
-              {scrapingStatus === "scraping" ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Syncing AI Catalog...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Sync FB Posts</span>
-                </>
-              )}
-            </button>
           </div>
 
           {/* Notification Quick Drawer Toggle & User Portal Navigation */}
@@ -586,28 +528,6 @@ export default function App() {
       {/* Main Container */}
       <main id="main-content-region" className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8">
         
-        {/* Scraping AI banner notification if success or error */}
-        {scrapingStatus !== "idle" && (
-          <div id="scraping-notifier-banner" className={`mb-6 p-4 rounded-xl flex items-center space-x-3 text-xs border ${
-            scrapingStatus === "success" 
-              ? "bg-emerald-50 border-emerald-100 text-emerald-800" 
-              : scrapingStatus === "error"
-              ? "bg-red-50 border-red-100 text-red-800"
-              : "bg-slate-100 border-slate-200 text-slate-700 animate-pulse"
-          }`}>
-            <Sparkles className={`w-4 h-4 shrink-0 ${scrapingStatus === "scraping" ? "animate-spin text-emerald-600" : ""}`} />
-            <div className="flex-1">
-              <span className="font-semibold block">AI Scraper Extraction Engine:</span>
-              <span>{scrapingMessage}</span>
-            </div>
-            {scrapingStatus !== "scraping" && (
-              <button onClick={() => setScrapingStatus("idle")} className="p-1 hover:bg-slate-200/50 rounded">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        )}
-
         {/* Dynamic content rendering based on active navigation tab */}
         <AnimatePresence mode="wait">
           <motion.div
@@ -635,7 +555,7 @@ export default function App() {
                         A personalized wellness journey
                       </h2>
                       <p className="text-xs text-emerald-100/80 leading-normal max-w-md">
-                        Every capsule and organic tea is fully verified by our AI matching mechanism, directly synchronized with Enrico Andaya's Facebook feed.
+                        Every capsule and organic tea is fully verified and officially sourced by Enrico Andaya.
                       </p>
                     </div>
                     <div className="flex -space-x-2 shrink-0">
@@ -677,13 +597,13 @@ export default function App() {
                       </div>
                       <h3 className="font-display font-semibold text-lg mb-1">Catalog loading...</h3>
                       <p className="text-xs text-slate-500 max-w-sm mb-4">
-                        We are populating the native herbal catalog or connecting with Enrico's live Facebook updates.
+                        We are populating the native herbal catalog with Enrico Andaya's verified formulations.
                       </p>
                       <button 
-                        onClick={triggerFacebookExtraction}
+                        onClick={() => window.location.reload()}
                         className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 transition"
                       >
-                        Manually Fetch Catalog
+                        Refresh Page
                       </button>
                     </div>
                   ) : (
@@ -705,12 +625,6 @@ export default function App() {
                               <span className="bg-emerald-600 text-white text-[9px] font-mono tracking-widest uppercase px-2.5 py-1 rounded-full font-bold shadow-sm">
                                 {product.category}
                               </span>
-                              {product.isExtracted && (
-                                <span className="bg-blue-600/90 backdrop-blur-md text-white text-[9px] font-mono tracking-wider px-2 py-0.5 rounded-full flex items-center space-x-1 font-bold shadow-sm">
-                                  <Facebook className="w-2.5 h-2.5" />
-                                  <span>FB SYNCED</span>
-                                </span>
-                              )}
                             </div>
 
                             {/* Inventory Status badge */}
@@ -1314,9 +1228,9 @@ export default function App() {
                   </p>
                   
                   <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 space-y-2 text-emerald-900">
-                    <span className="font-semibold block text-sm">Automated Digital Matching:</span>
+                    <span className="font-semibold block text-sm">Verified Product Catalog:</span>
                     <p>
-                      Our system utilizes standard, fast-acting scraper processes that trace the real-time media feeds on Enrico Andaya's official Facebook Profile. We match and detect each physical wellness item with precision, immediately making them available for secure purchase via GCash Reference Verification to **CP # 09560333111** or PayPal settlement to <strong>andayaenrico55@gmail.com</strong>.
+                      All products listed in our store are manually verified and officially sourced formulations by Enrico Andaya. We ensure real-time stock tracking and immediate dispatch upon secure purchase via GCash Reference Verification to **CP # 09560333111** or PayPal settlement to <strong>andayaenrico55@gmail.com</strong>.
                     </p>
                   </div>
 
@@ -1345,7 +1259,7 @@ export default function App() {
           <div className="flex flex-col md:items-end space-y-1.5 font-mono text-[10px]">
             <div>Authorized Fund Representative: andayaenrico55@gmail.com</div>
             <div>GCash CP #: 09560333111</div>
-            <div>Scraped Source: <span className="text-blue-400">facebook.com/profile.php?id=61587916804588</span></div>
+            <div>Official Wellness Partner: Enrico Andaya</div>
             <div className="text-emerald-400">© 2026 Love Herbal PH Corp.</div>
           </div>
         </div>

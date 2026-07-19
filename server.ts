@@ -23,156 +23,67 @@ const ai = process.env.GEMINI_API_KEY
     })
   : null;
 
-// Initial in-memory data store for products (with some pre-extracted sample Love Herbal products)
+// Initial in-memory data store for products (Official Love Herbal Catalog)
 let products = [
   {
-    id: "prod-1",
-    name: "Pure Moringa Oleifera (Malunggay) Capsules",
-    description: "Premium grade organically-grown Malunggay leaf powder in vegan capsules. High in Vitamin C, Iron, Potassium, and full of powerful antioxidants to naturally support daily vitality and immune health.",
-    benefits: ["Supports immune system strength", "Rich in natural vitamins and minerals", "Boosts daily energy and reduces fatigue"],
-    price: 350,
-    image: "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    stock: 25,
-    category: "Capsules",
-    isExtracted: true,
-    fbPostId: "post-101",
-    fbPostUrl: "https://www.facebook.com/profile.php?id=61587916804588/posts/101",
-    detectedAt: "2026-07-18T10:30:00Z"
+    id: "prod-glowtah",
+    name: "GLOWTAH Herbal Coffee Mix",
+    description: "The 'Pambabae' coffee mix. A powerful blend designed to support skin health, anti-aging, and detoxification while boosting metabolism.",
+    benefits: ["Skin health & glow", "Anti-aging & Detox", "Fat management & metabolism", "Brain & kidney health"],
+    price: 275,
+    image: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=600&auto=format&fit=crop&q=60",
+    stock: 50,
+    category: "Coffee Mix",
+    isExtracted: false
   },
   {
-    id: "prod-2",
-    name: "Wild-Crafted Banaba Leaf Tea",
-    description: "Traditional herbal tea made from wild-harvested Banaba leaves. Known in Filipino wellness traditions to support healthy blood sugar balance and kidney function.",
-    benefits: ["Helps maintain healthy blood sugar", "Promotes natural kidney health", "Supports cellular wellness and metabolic balance"],
-    price: 240,
-    image: "https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    stock: 4, // low stock to trigger alert
-    category: "Teas",
-    isExtracted: true,
-    fbPostId: "post-102",
-    fbPostUrl: "https://www.facebook.com/profile.php?id=61587916804588/posts/102",
-    detectedAt: "2026-07-18T11:15:00Z"
+    id: "prod-buffalo",
+    name: "BUFFALO Herbal Coffee Mix",
+    description: "Specially blended for men. Infused with Tongkat Ali and Ginseng to support energy, endurance, and male vitality.",
+    benefits: ["Energy & endurance", "Libido & performance", "Testosterone support", "Immune system health"],
+    price: 275,
+    image: "https://images.unsplash.com/photo-1580915411954-282cb1b0d780?w=600&auto=format&fit=crop&q=60",
+    stock: 45,
+    category: "Coffee Mix",
+    isExtracted: false
   },
   {
-    id: "prod-3",
-    name: "Lagundi Respiratory Support Liquid Extract",
-    description: "Pure Lagundi (Vitex negundo) liquid drops formulated for quick absorption. A popular and widely recommended natural respiratory aid for soothing coughs and supporting clear airways.",
-    benefits: ["Soothes dry and spasmodic coughs", "Supports respiratory health and airways", "Fast-acting natural liquid drops"],
+    id: "prod-vit-c",
+    name: "Alkaline Vitamin C (90-cap)",
+    description: "90 capsules of premium Alkaline Vitamin C for superior immune support without the acidity.",
+    benefits: ["Immune system strength", "Non-acidic formula", "Powerful antioxidant"],
     price: 450,
-    image: "https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    stock: 18,
-    category: "Liquid Extracts",
-    isExtracted: true,
-    fbPostId: "post-103",
-    fbPostUrl: "https://www.facebook.com/profile.php?id=61587916804588/posts/103",
-    detectedAt: "2026-07-18T12:00:00Z"
+    image: "https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=600&auto=format&fit=crop&q=60",
+    stock: 30,
+    category: "Capsules",
+    isExtracted: false
   },
   {
-    id: "prod-4",
-    name: "Sambong Kidney & Water Balance Tonic",
-    description: "Organic Sambong herbal compound. Traditionally utilized in the Philippines as a natural diuretic to aid in flushing out kidney stones and supporting urinary system efficiency.",
-    benefits: ["Promotes natural fluid balance", "Supports kidney and urinary tract function", "Made from high-purity Sambong leaves"],
-    price: 280,
-    image: "https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    stock: 3, // low stock to trigger alert
-    category: "Teas",
-    isExtracted: true,
-    fbPostId: "post-104",
-    fbPostUrl: "https://www.facebook.com/profile.php?id=61587916804588/posts/104",
-    detectedAt: "2026-07-18T14:45:00Z"
+    id: "prod-barley",
+    name: "Barley Capsule (90-cap)",
+    description: "Pure Barley grass powder in capsules. A superfood powerhouse for overall cellular health.",
+    benefits: ["Nutrient dense superfood", "Supports digestive health", "Energy booster"],
+    price: 750,
+    image: "https://images.unsplash.com/photo-1616671285410-9a2245367667?w=600&auto=format&fit=crop&q=60",
+    stock: 20,
+    category: "Capsules",
+    isExtracted: false
   },
   {
-    id: "prod-5",
-    name: "Ginger & Turmeric Fusion Honey",
-    description: "Raw wild forest honey infused with active extracts of native ginger (luya) and organic turmeric (luyang dilaw). A soothing, warm fusion designed to support healthy digestion and joint mobility.",
-    benefits: ["Comforts and supports healthy digestion", "Natural anti-inflammatory properties for joints", "Soothing relief for sore throat"],
-    price: 320,
-    image: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    stock: 12,
-    category: "Honey & Fusions",
-    isExtracted: true,
-    fbPostId: "post-105",
-    fbPostUrl: "https://www.facebook.com/profile.php?id=61587916804588/posts/105",
-    detectedAt: "2026-07-18T15:30:00Z"
+    id: "prod-gluta",
+    name: "Gluta-Collagen-Carnitine (90-cap)",
+    description: "The ultimate beauty and fitness blend. Combines Glutathione, Collagen, and L-Carnitine for skin and weight support.",
+    benefits: ["Skin whitening & elasticity", "Weight management support", "90 capsules per bottle"],
+    price: 750,
+    image: "https://images.unsplash.com/photo-1626202340534-f958804d38c3?w=600&auto=format&fit=crop&q=60",
+    stock: 15,
+    category: "Capsules",
+    isExtracted: false
   }
 ];
 
 // Initial transactions store
-let transactions = [
-  {
-    id: "tx-1001",
-    date: "2026-07-18T14:22:11Z",
-    customerName: "Juan Dela Cruz",
-    customerEmail: "juan.delacruz@example.com",
-    items: [
-      {
-        productId: "prod-1",
-        productName: "Pure Moringa Oleifera (Malunggay) Capsules",
-        quantity: 2,
-        price: 350
-      }
-    ],
-    totalAmount: 700,
-    paymentMethod: "GCash" as const,
-    paymentReference: "109827384918",
-    status: "Completed" as const,
-    orNumber: "OR-2026-0718-0001"
-  }
-];
-
-// Media mock storage (extracted posts from facebook profile URL)
-let facebookPosts = [
-  {
-    id: "post-101",
-    text: "🍀 [Love Herbal Capsule Release] Say goodbye to sluggish afternoons! Our Pure Moringa capsules are packed with natural Vitamin C and Iron. Pre-order now at Php 350 per bottle!",
-    url: "https://www.facebook.com/profile.php?id=61587916804588/posts/101",
-    mediaUrl: "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    postedAt: "2026-07-18T10:30:00Z",
-    likes: 42,
-    comments: 8,
-    shares: 5
-  },
-  {
-    id: "post-102",
-    text: "🍵 Introducing our Wild-Crafted Banaba Leaf Tea. Sourced directly from local farming partners, this brew is perfect for promoting healthy blood sugar balance. Cleanse your body starting today. 240 Php per pack.",
-    url: "https://www.facebook.com/profile.php?id=61587916804588/posts/102",
-    mediaUrl: "https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    postedAt: "2026-07-18T11:15:00Z",
-    likes: 56,
-    comments: 14,
-    shares: 11
-  },
-  {
-    id: "post-103",
-    text: "🍂 Coughing? Feeling congested? Try Lagundi! Our liquid Lagundi extract is fast-absorbing and has a soothing minty hint. Highly recommended by wellness advocates. Php 450 per 50ml bottle.",
-    url: "https://www.facebook.com/profile.php?id=61587916804588/posts/103",
-    mediaUrl: "https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    postedAt: "2026-07-18T12:00:00Z",
-    likes: 83,
-    comments: 29,
-    shares: 24
-  },
-  {
-    id: "post-104",
-    text: "💧 Sambong herbal tea is fully restocked! Pure Sambong leaves are traditional remedies that assist kidney detoxification and natural fluid regulation. Get yours for just Php 280.",
-    url: "https://www.facebook.com/profile.php?id=61587916804588/posts/104",
-    mediaUrl: "https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    postedAt: "2026-07-18T14:45:00Z",
-    likes: 38,
-    comments: 6,
-    shares: 2
-  },
-  {
-    id: "post-105",
-    text: "🍯 Sweet wellness in a jar! Ginger & Turmeric Fusion Honey combines organic ginger, fresh yellow turmeric, and wild mountain forest honey. Amazing for joint stiffness and warm immune support. Php 320.",
-    url: "https://www.facebook.com/profile.php?id=61587916804588/posts/105",
-    mediaUrl: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-    postedAt: "2026-07-18T15:30:00Z",
-    likes: 95,
-    comments: 34,
-    shares: 41
-  }
-];
+let transactions = [];
 
 // Helper to check for low stock alert
 function checkLowStockAlerts() {
@@ -195,141 +106,15 @@ app.get("/api/products", (req, res) => {
   });
 });
 
-// 2. Fetch Facebook posts & AI Detection endpoint
+// 2. Sync endpoint (Simplified to return current catalog)
 app.post("/api/extract-facebook-media", async (req, res) => {
-  const { url } = req.body;
-  if (!url) {
-    return res.status(400).json({ error: "Facebook page URL is required" });
-  }
-
-  // This is a simulated scraper that accesses the requested Facebook Profile:
-  // "https://www.facebook.com/profile.php?id=61587916804588"
-  // It returns the real-time posts from this specific profile.
-  // Then we can use the Gemini API to analyze, detect if it's a product, and extract product details automatically if it is!
-  
-  if (!ai) {
-    // If Gemini key is missing, we use default parsed outputs
-    return res.json({
-      success: true,
-      message: "Scraped and detected 5 herbal products using standard Philippines wellness schema (Local mode without API Key)",
-      postsScrapedCount: facebookPosts.length,
-      detectedProductsCount: products.length,
-      productsDetected: products
-    });
-  }
-
-  try {
-    const prompt = `
-    You are an AI assistant analyzing Facebook posts from a natural wellness page named "Love Herbal" created by Usagyuun VTuber.
-    Analyze the following list of Facebook posts.
-    Determine which posts describe a product for sale, and extract their details.
-
-    Posts:
-    ${facebookPosts.map((post, i) => `
-    Post Index: ${i}
-    Post ID: ${post.id}
-    Text: "${post.text}"
-    `).join("\n\n")}
-
-    For each post that IS a product for sale, extract its details in JSON format conforming to this schema:
-    {
-      "detectedProducts": [
-        {
-          "postId": "the Post ID associated with this product (e.g. post-101)",
-          "productName": "Name of the herbal product",
-          "description": "Clear, appealing description of the product based on the post text",
-          "benefits": ["Benefit 1", "Benefit 2", "Benefit 3"],
-          "price": number (extract numeric price in Philippine Peso PHP),
-          "category": "Capsules" | "Teas" | "Liquid Extracts" | "Honey & Fusions" | "Other"
-        }
-      ]
-    }
-    `;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            detectedProducts: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  postId: { type: Type.STRING },
-                  productName: { type: Type.STRING },
-                  description: { type: Type.STRING },
-                  benefits: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING }
-                  },
-                  price: { type: Type.NUMBER },
-                  category: { type: Type.STRING }
-                },
-                required: ["postId", "productName", "price"]
-              }
-            }
-          },
-          required: ["detectedProducts"]
-        }
-      }
-    });
-
-    const resultText = response.text || "{\"detectedProducts\":[]}";
-    const resultJson = JSON.parse(resultText);
-    const detected: any[] = [];
-
-    if (resultJson && Array.isArray(resultJson.detectedProducts)) {
-      for (const item of resultJson.detectedProducts) {
-        const matchedPost = facebookPosts.find(p => p.id === item.postId);
-        const mediaUrl = matchedPost ? matchedPost.mediaUrl : "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3";
-        const url = matchedPost ? matchedPost.url : "https://www.facebook.com/profile.php?id=61587916804588";
-
-        detected.push({
-          id: `prod-${item.postId || Math.random()}`,
-          name: item.productName || "Unknown Herbal Product",
-          description: item.description || "Fresh natural herbal medicine formulation.",
-          benefits: item.benefits || ["Natural wellness support"],
-          price: item.price || 300,
-          image: mediaUrl,
-          stock: Math.floor(Math.random() * 20) + 10,
-          category: item.category || "Teas",
-          isExtracted: true,
-          fbPostId: item.postId,
-          fbPostUrl: url,
-          detectedAt: new Date().toISOString()
-        });
-      }
-    }
-
-    // Merge detected products into our database if they don't already exist
-    detected.forEach(newP => {
-      const exists = products.find(p => p.id === newP.id || p.name.toLowerCase() === newP.name.toLowerCase());
-      if (!exists) {
-        products.push(newP);
-      }
-    });
-
-    res.json({
-      success: true,
-      message: `Scraped and AI-analyzed ${facebookPosts.length} posts. Detected ${detected.length} products.`,
-      postsScrapedCount: facebookPosts.length,
-      detectedProductsCount: detected.length,
-      productsDetected: products
-    });
-  } catch (error: any) {
-    console.error("AI Extractor error, falling back to cache: ", error);
-    res.json({
-      success: true,
-      message: "Scraped and updated Love Herbal catalog using offline backup cache.",
-      postsScrapedCount: facebookPosts.length,
-      detectedProductsCount: products.length,
-      productsDetected: products
-    });
-  }
+  res.json({
+    success: true,
+    message: "Catalog synchronized with official Love Herbal inventory.",
+    postsScrapedCount: 0,
+    detectedProductsCount: products.length,
+    productsDetected: products
+  });
 });
 
 // 3. Automated checkout / purchase system
@@ -464,6 +249,11 @@ app.post("/api/chat", async (req, res) => {
     Greet the user in a cheerful VTuber tone (using words like 'Hello, wellness explorer!', 'Yay!', or cute herbal phrases, and occasionally saying friendly local tagalog greetings).
     You are representing Enrico Andaya's herbal products (Moringa/Malunggay Capsules, Banaba Tea, Lagundi Extract, Sambong Kidneys, Ginger & Turmeric Fusion Honey).
     Provide wellness advice strictly related to natural herbal remedies, dosing guidelines, and help users decide what product is best for their health.
+    
+    NEW PRODUCTS ALERT:
+    - GLOWTAH Herbal Coffee Mix: For women. Supports skin health, anti-aging, detox, brain/kidney health, fat management, and metabolism. Ingredients: Ashwagandha, Moringa, Garcinia Cambogia, L-Carnitine, Glutathione, Collagen, Spirulina, Mangosteen.
+    - BUFFALO Herbal Coffee Mix: For men. Supports energy, endurance, libido, performance, testosterone, and immune health. Ingredients: Tongkat Ali, Ginseng, Maca Root, Horny Goat Weed, Mangosteen.
+    
     If the user asks about customer support, order updates, or GCash payments, provide the official info:
     - Customer Support Email: andayaenrico55@gmail.com
     - GCash Payment / Phone (CP #): 09560333111
