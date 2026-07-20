@@ -33,11 +33,16 @@ import { motion, AnimatePresence } from "motion/react";
 export default function App() {
   // State variables
   const [showTitleScreen, setShowTitleScreen] = useState(true);
-  const [activeTab, setActiveTab] = useState<"store" | "support" | "portal" | "dashboard" | "about">("store");
+  const [activeTab, setActiveTab] = useState<"store" | "cart" | "support" | "portal" | "dashboard" | "about">("store");
   const [products, setProducts] = useState<Product[]>([]);
   const [stockAlerts, setStockAlerts] = useState<string[]>([]);
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
   
+  // Shipping and confirmation input states
+  const [shippingAddress, setShippingAddress] = useState("");
+  const [confirmingRefNum, setConfirmingRefNum] = useState<{ [orderId: string]: string }>({});
+  const [verifyingOrderId, setVerifyingOrderId] = useState<string | null>(null);
+
   // Notifications prompt state
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean | null>(null);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -220,7 +225,8 @@ export default function App() {
       addSystemAlert("warning", "Your cart is empty! Please select a formulation first.");
       return;
     }
-    setShowCheckoutModal(true);
+    setActiveTab("cart");
+    addSystemAlert("info", "Welcome to your dedicated Cart & Checkout tab. Enter your shipping coordinates below!");
   };
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
@@ -231,18 +237,16 @@ export default function App() {
     }
 
     if (paymentMethod === "GCash") {
-      if (!referenceNumber) {
-        addSystemAlert("warning", "GCash payments require to type in reference number.");
-        return;
-      }
-      // Trigger Philippine GCash visual processing
       setGcashStatus("verifying");
-      addSystemAlert("info", "GCash real-time reference audit matching. Please wait...");
+      if (!referenceNumber) {
+        addSystemAlert("info", "Placing order with Pending GCash verification. You can confirm in portal.");
+      } else {
+        addSystemAlert("info", "GCash real-time reference audit matching. Please wait...");
+      }
       
-      // Real-time verification loop delay
       setTimeout(async () => {
         await executeFinalCheckout();
-      }, 2500);
+      }, 2000);
     } else {
       // PayPal flow
       await executeFinalCheckout();
@@ -262,7 +266,8 @@ export default function App() {
             quantity: item.quantity
           })),
           paymentMethod,
-          referenceNumber: paymentMethod === "GCash" ? referenceNumber : undefined
+          referenceNumber: paymentMethod === "GCash" ? referenceNumber : undefined,
+          shippingAddress: shippingAddress || undefined
         })
       });
 
@@ -314,6 +319,61 @@ export default function App() {
       setPortalError("Portal verification error: " + err.message);
     } finally {
       setPortalSearching(false);
+    }
+  };
+
+  // Confirm GCash payment with reference number
+  const handleConfirmGcashPayment = async (orderId: string) => {
+    const refNum = confirmingRefNum[orderId];
+    if (!refNum || !refNum.trim()) {
+      addSystemAlert("warning", "Please paste or type your GCash Reference Number first.");
+      return;
+    }
+    setVerifyingOrderId(orderId);
+    try {
+      const res = await fetch("/api/portal/confirm-gcash-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, referenceNumber: refNum })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addSystemAlert("success", "GCash Payment verified! Shipping preparation started.");
+        // Clear confirming ref input
+        setConfirmingRefNum(prev => {
+          const updated = { ...prev };
+          delete updated[orderId];
+          return updated;
+        });
+        // Re-fetch portal orders to reflect updated status
+        handlePortalSearch(portalEmail);
+      } else {
+        addSystemAlert("warning", data.error || "Failed to confirm payment reference.");
+      }
+    } catch (e: any) {
+      addSystemAlert("warning", "Connection offline: " + e.message);
+    } finally {
+      setVerifyingOrderId(null);
+    }
+  };
+
+  // Simulate shipping tracking stepper progression
+  const handleSimulateShipping = async (orderId: string) => {
+    try {
+      const res = await fetch("/api/portal/simulate-shipping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addSystemAlert("success", `Shipment tracker: Status updated to "${data.transaction.shippingStatus}"!`);
+        handlePortalSearch(portalEmail);
+      } else {
+        addSystemAlert("warning", data.error || "Failed to simulate shipping progress.");
+      }
+    } catch (e: any) {
+      addSystemAlert("warning", "Connection offline: " + e.message);
     }
   };
 
@@ -498,9 +558,10 @@ export default function App() {
         {/* Global tab Navigation with explicit layout IDs */}
         <div className="max-w-7xl mx-auto mt-4 pt-4 border-t border-slate-100 flex items-center space-x-1 overflow-x-auto pb-1 scrollbar-thin">
           {[
-            { id: "store", label: "Organic Store", icon: ShoppingBag },
+            { id: "store", label: "Shop Catalog", icon: Leaf },
+            { id: "cart", label: "My Cart & Checkout", icon: ShoppingBag },
+            { id: "portal", label: "Orders & Shipping Portal", icon: FileText },
             { id: "support", label: "Usagyuun Wellness AI", icon: MessageSquare },
-            { id: "portal", label: "Digital Receipts & Portal", icon: FileText },
             { id: "dashboard", label: "Inventory & Audit", icon: TrendingUp },
             { id: "about", label: "Enrico's Heritage", icon: Award }
           ].map((tab) => {
@@ -811,6 +872,254 @@ export default function App() {
               </div>
             )}
 
+            {/* TAB 1b: MY CART & CHECKOUT */}
+            {activeTab === "cart" && (
+              <div id="cart-view" className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Left Column: Items to Order (7 Columns) */}
+                <div className="lg:col-span-7 space-y-6">
+                  <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+                    <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2.5 bg-emerald-50 rounded-xl text-emerald-600">
+                          <ShoppingBag className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-display font-bold text-slate-900 text-base">Your Selected Items</h3>
+                          <p className="text-xs text-slate-500">Review the formulation quantities before shipping</p>
+                        </div>
+                      </div>
+                      <span className="bg-emerald-50 text-emerald-800 px-3 py-1 rounded-full font-mono text-xs font-semibold border border-emerald-100">
+                        {cart.reduce((s, c) => s + c.quantity, 0)} items
+                      </span>
+                    </div>
+
+                    {cart.length === 0 ? (
+                      <div className="py-16 text-center flex flex-col items-center justify-center">
+                        <div className="p-4 bg-slate-50 text-slate-400 rounded-full mb-4">
+                          <ShoppingBag className="w-8 h-8" />
+                        </div>
+                        <h4 className="text-sm font-semibold text-slate-900">Your cart is empty</h4>
+                        <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                          Browse our personalized traditional wellness coffee blends on the Shop Catalog tab to add items.
+                        </p>
+                        <button
+                          onClick={() => setActiveTab("store")}
+                          className="mt-6 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition-all shadow-sm"
+                        >
+                          Go to Shop Catalog
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {cart.map((item) => (
+                          <div key={item.product.id} className="flex items-center space-x-4 p-3 bg-slate-50/50 rounded-2xl border border-slate-100 hover:border-slate-200 transition-all">
+                            <img 
+                              src={item.product.image} 
+                              alt={item.product.name} 
+                              className="w-16 h-16 rounded-xl object-cover shrink-0 border border-slate-100"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-xs font-bold text-slate-900 leading-snug">{item.product.name}</h4>
+                              <p className="text-[10px] text-slate-400 font-medium mt-0.5">{item.product.category}</p>
+                              <p className="text-xs font-semibold text-slate-900 mt-1 font-mono">₱{item.product.price} each</p>
+                            </div>
+                            <div className="flex items-center space-x-2 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+                              <button 
+                                onClick={() => updateCartQuantity(item.product.id, -1)}
+                                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors"
+                              >
+                                <Minus className="w-3.5 h-3.5" />
+                              </button>
+                              <span className="text-xs font-mono font-bold px-1.5 min-w-6 text-center">
+                                {item.quantity}
+                              </span>
+                              <button 
+                                onClick={() => updateCartQuantity(item.product.id, 1)}
+                                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            <div className="text-right pl-2">
+                              <p className="text-xs font-mono font-bold text-emerald-800">₱{item.product.price * item.quantity}.00</p>
+                              <button
+                                onClick={() => updateCartQuantity(item.product.id, -item.quantity)}
+                                className="text-[10px] text-red-500 hover:text-red-700 font-medium mt-1"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+
+                        <div className="pt-6 border-t border-slate-100 space-y-3">
+                          <div className="flex justify-between text-xs text-slate-500">
+                            <span>Subtotal</span>
+                            <span className="font-mono">₱{getCartTotal()}.00</span>
+                          </div>
+                          <div className="flex justify-between text-xs text-slate-500">
+                            <span>Shipping & Delivery Fee</span>
+                            <span className="text-emerald-600 font-bold text-[10px] uppercase bg-emerald-50 px-2 py-0.5 rounded">Free Shipping</span>
+                          </div>
+                          <div className="flex justify-between items-center pt-3 border-t border-slate-150">
+                            <span className="text-sm font-bold text-slate-900">Order Total Amount</span>
+                            <span className="text-xl font-mono font-bold text-emerald-800">₱{getCartTotal()}.00</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Merchant Details / Verification Instructions */}
+                  <div className="bg-gradient-to-r from-teal-900 to-emerald-950 text-white rounded-3xl p-6 shadow-md space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                      <h4 className="font-display font-bold text-sm">Official Authorized Merchant Info</h4>
+                    </div>
+                    <p className="text-xs text-emerald-100/90 leading-relaxed">
+                      For GCash wellness funds and automated deliveries, Enrico Andaya processes verification immediately at:
+                    </p>
+                    <div className="bg-white/10 rounded-2xl p-4 space-y-2.5 font-mono text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-emerald-300">GCash CP #:</span>
+                        <span className="font-bold">09560333111 (Love Herbal)</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-emerald-300">Authorized Email:</span>
+                        <span className="font-bold">andayaenrico55@gmail.com</span>
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-emerald-300/80 leading-snug">
+                      *Please save your GCash Transaction Reference Number. You can paste it here or in the portal to confirm your order and trigger instantaneous shipping dispatcher preparation!
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Secure Portal & Checkout (5 Columns) */}
+                <div className="lg:col-span-5 space-y-6">
+                  <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-6">
+                    <div>
+                      <h3 className="font-display font-bold text-slate-900 text-base">Secure Dispatch & Checkout</h3>
+                      <p className="text-xs text-slate-500">Provide shipping coordinates to proceed</p>
+                    </div>
+
+                    <form onSubmit={handleCheckoutSubmit} className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Full Name</label>
+                        <input 
+                          type="text" 
+                          required
+                          placeholder="Juan Dela Cruz"
+                          value={checkoutName}
+                          onChange={(e) => setCheckoutName(e.target.value)}
+                          className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Email Address</label>
+                        <input 
+                          type="email" 
+                          required
+                          placeholder="juan@example.com"
+                          value={checkoutEmail}
+                          onChange={(e) => setCheckoutEmail(e.target.value)}
+                          className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Detailed Shipping / Delivery Address</label>
+                        <textarea 
+                          rows={3}
+                          required
+                          placeholder="Block 2 Lot 14, Emerald Street, Brgy. San Jose, Pasig City, Metro Manila, 1600"
+                          value={shippingAddress}
+                          onChange={(e) => setShippingAddress(e.target.value)}
+                          className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 resize-none"
+                        />
+                        <span className="text-[9px] text-slate-400">Complete coordinates guarantee rapid 24-48h dispatch.</span>
+                      </div>
+
+                      <div className="space-y-2 pt-2">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Payment Method Selector</label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod("GCash")}
+                            className={`p-3 rounded-xl border text-xs font-semibold transition-all flex flex-col items-center justify-center space-y-1 ${
+                              paymentMethod === "GCash"
+                                ? "border-emerald-500 bg-emerald-50 text-emerald-900"
+                                : "border-slate-200 hover:bg-slate-50 text-slate-700"
+                            }`}
+                          >
+                            <span className="text-base">📱</span>
+                            <span>GCash Wallet</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod("PayPal")}
+                            className={`p-3 rounded-xl border text-xs font-semibold transition-all flex flex-col items-center justify-center space-y-1 ${
+                              paymentMethod === "PayPal"
+                                ? "border-emerald-500 bg-emerald-50 text-emerald-900"
+                                : "border-slate-200 hover:bg-slate-50 text-slate-700"
+                            }`}
+                          >
+                            <span className="text-base">💳</span>
+                            <span>PayPal / Card</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {paymentMethod === "GCash" && (
+                        <div className="bg-amber-50/70 border border-amber-200/50 rounded-2xl p-4 space-y-3">
+                          <div>
+                            <span className="text-[9px] uppercase tracking-wider font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                              GCash Transfer Guide
+                            </span>
+                            <p className="text-[11px] text-amber-900 mt-1.5 font-medium">
+                              Send exactly <strong className="text-emerald-800">₱{getCartTotal()}.00</strong> to GCash <strong>09560333111</strong>
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-amber-800 uppercase tracking-wider">Paste GCash Ref # (Optional to proceed, confirm later)</label>
+                            <input 
+                              type="text" 
+                              placeholder="13-Digit Reference Number"
+                              value={referenceNumber}
+                              onChange={(e) => setReferenceNumber(e.target.value)}
+                              className="w-full text-xs p-2.5 border border-amber-200 rounded-lg focus:outline-none focus:border-amber-500 bg-white font-mono"
+                            />
+                            <p className="text-[9px] text-amber-700">
+                              Pasting your GCash reference now allows instant automated dispatch! If left empty, you can paste it later on the Orders Portal.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={cart.length === 0 || gcashStatus === "verifying"}
+                        className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-55 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center space-x-2"
+                      >
+                        {gcashStatus === "verifying" ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            <span>Processing Secure Dispatch...</span>
+                          </>
+                        ) : (
+                          <>
+                            <ShieldCheck className="w-4 h-4" />
+                            <span>{paymentMethod === "GCash" && !referenceNumber ? "Place Order (Verify Later)" : "Place Order & Pay"}</span>
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* TAB 2: AI CUSTOMER SUPPORT CHATBOT */}
             {activeTab === "support" && (
               <div id="support-view" className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -1029,11 +1338,77 @@ export default function App() {
 
                             <div className="bg-slate-50 p-2.5 rounded-xl text-[10px] text-slate-500 font-mono space-y-1">
                               <div>Payment Method: {order.paymentMethod}</div>
-                              <div>Ref Number: {order.paymentReference}</div>
+                              <div>Ref Number: {order.paymentReference || "Awaiting Confirmation"}</div>
                               <div>Merchant Account: andayaenrico55@gmail.com</div>
                               <div>GCash Account (CP #): 09560333111</div>
+                              {order.shippingAddress && <div>Shipping To: {order.shippingAddress}</div>}
+                              {order.trackingNumber && <div>Tracking ID: {order.trackingNumber}</div>}
                               <div>Checkout Date: {new Date(order.date).toLocaleString()}</div>
                             </div>
+
+                            {/* Shipping Progress Tracker */}
+                            <div className="pt-4 border-t border-slate-100 space-y-3">
+                              <span className="text-[10px] text-slate-400 font-mono block">SHIPPING & DISPATCH STATUS</span>
+                              
+                              {/* Visual Stepper */}
+                              <div className="grid grid-cols-5 gap-1 items-center pt-1">
+                                {['Pending Payment', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered'].map((stage, idx) => {
+                                  const stages = ['Pending Payment', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered'];
+                                  const currentIdx = stages.indexOf(order.shippingStatus || 'Processing');
+                                  const isPassedOrCurrent = idx <= currentIdx;
+                                  return (
+                                    <div key={stage} className="flex flex-col items-center">
+                                      <div className={`w-2.5 h-2.5 rounded-full ${
+                                        isPassedOrCurrent ? "bg-emerald-600 animate-pulse" : "bg-slate-200"
+                                      }`} />
+                                      <span className={`text-[8px] text-center mt-1 scale-90 ${
+                                        isPassedOrCurrent ? "text-emerald-800 font-bold" : "text-slate-400"
+                                      }`}>
+                                        {stage.split(' ')[0]}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              
+                              <div className="bg-emerald-50/50 rounded-xl p-2.5 text-[11px] text-emerald-900 border border-emerald-100 flex items-center justify-between">
+                                <div>
+                                  Current: <strong className="text-emerald-800">{order.shippingStatus || "Processing"}</strong>
+                                </div>
+                                <button
+                                  onClick={() => handleSimulateShipping(order.id)}
+                                  className="text-[9px] font-bold text-emerald-700 hover:text-emerald-950 underline cursor-pointer"
+                                >
+                                  Simulate Stage 🚀
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Paste GCash Reference Number to Confirm Payment */}
+                            {order.status === "Pending" && order.paymentMethod === "GCash" && (
+                              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mt-2 space-y-2.5">
+                                <div className="text-[10px] text-amber-900 font-bold uppercase tracking-wider">Awaiting GCash Verification</div>
+                                <p className="text-[11px] text-amber-800 leading-normal">
+                                  Please send <strong>₱{order.totalAmount}.00</strong> to GCash <strong>CP # 09560333111</strong> and paste the reference number below to confirm shipment dispatch:
+                                </p>
+                                <div className="flex gap-2">
+                                  <input 
+                                    type="text"
+                                    placeholder="13-Digit GCash Ref Number"
+                                    value={confirmingRefNum[order.id] || ""}
+                                    onChange={(e) => setConfirmingRefNum(prev => ({ ...prev, [order.id]: e.target.value }))}
+                                    className="flex-1 text-xs border border-amber-200 rounded-xl p-2 focus:outline-none focus:border-amber-500 font-mono bg-white"
+                                  />
+                                  <button
+                                    onClick={() => handleConfirmGcashPayment(order.id)}
+                                    disabled={verifyingOrderId === order.id}
+                                    className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-[10px] rounded-xl px-4 py-2 transition-all shrink-0"
+                                  >
+                                    Confirm Payment
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           <button

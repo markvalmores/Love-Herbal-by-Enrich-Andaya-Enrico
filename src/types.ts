@@ -29,6 +29,9 @@ export interface Transaction {
   paymentReference?: string;
   status: 'Pending' | 'Completed' | 'Failed';
   orNumber: string;
+  shippingAddress?: string;
+  shippingStatus?: 'Pending Payment' | 'Processing' | 'Shipped' | 'Out for Delivery' | 'Delivered';
+  trackingNumber?: string;
 }
 
 export interface ChatMessage {

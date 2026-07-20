@@ -119,14 +119,10 @@ app.post("/api/extract-facebook-media", async (req, res) => {
 
 // 3. Automated checkout / purchase system
 app.post("/api/checkout", (req, res) => {
-  const { customerName, customerEmail, cartItems, paymentMethod, referenceNumber } = req.body;
+  const { customerName, customerEmail, cartItems, paymentMethod, referenceNumber, shippingAddress } = req.body;
 
   if (!customerName || !customerEmail || !cartItems || cartItems.length === 0 || !paymentMethod) {
     return res.status(400).json({ error: "Missing checkout parameters" });
-  }
-
-  if (paymentMethod === "GCash" && !referenceNumber) {
-    return res.status(400).json({ error: "GCash reference number is required to proceed" });
   }
 
   // Double check and deduct inventory
@@ -167,6 +163,9 @@ app.post("/api/checkout", (req, res) => {
   const txId = "tx-" + Math.floor(1000 + Math.random() * 9000);
   const orNumber = "OR-" + new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, '0') + String(new Date().getDate()).padStart(2, '0') + "-" + Math.floor(1000 + Math.random() * 9000);
 
+  // If GCash is selected, check if they passed referenceNumber. If not, it can start as Pending Payment status
+  const isGcashPending = paymentMethod === "GCash" && !referenceNumber;
+
   const newTx = {
     id: txId,
     date: new Date().toISOString(),
@@ -175,9 +174,12 @@ app.post("/api/checkout", (req, res) => {
     items: itemsSummary,
     totalAmount,
     paymentMethod,
-    paymentReference: referenceNumber || "PAYPAL-DIRECT-" + Math.floor(100000 + Math.random() * 900000),
-    status: "Completed" as const,
-    orNumber
+    paymentReference: referenceNumber || (isGcashPending ? "" : "PAYPAL-DIRECT-" + Math.floor(100000 + Math.random() * 900000)),
+    status: isGcashPending ? "Pending" as const : "Completed" as const,
+    orNumber,
+    shippingAddress: shippingAddress || "Metro Manila, Philippines",
+    shippingStatus: isGcashPending ? "Pending Payment" as const : "Processing" as const,
+    trackingNumber: "LH-" + Math.floor(100000 + Math.random() * 900000)
   };
 
   transactions.unshift(newTx);
@@ -191,11 +193,10 @@ app.post("/api/checkout", (req, res) => {
     Developed and created by Usagyuun VTuber a.k.a Mark David Valmores.
 
     Here are the details of your confirmed transaction:
-    Official OR Receipt Number: ${orNumber
-}
+    Official OR Receipt Number: ${orNumber}
     Transaction ID: ${txId}
     Payment Method: ${paymentMethod}
-    Payment Reference No: ${newTx.paymentReference}
+    Payment Reference No: ${newTx.paymentReference || "Awaiting Confirmation"}
     Recipient Email: andayaenrico55@gmail.com (Authorized wellness fund merchant account)
     GCash Account Number (CP #): 09560333111 (Love Herbal)
 
@@ -213,7 +214,9 @@ app.post("/api/checkout", (req, res) => {
 
   res.json({
     success: true,
-    message: "Thank you for your purchase! Come again soon.",
+    message: isGcashPending 
+      ? "Order placed! Please paste your GCash Reference Number in the Orders Portal to confirm shipping."
+      : "Thank you for your purchase! Come again soon.",
     transaction: newTx,
     emailReceipt: {
       to: customerEmail,
@@ -234,6 +237,59 @@ app.get("/api/portal/orders", (req, res) => {
   res.json({
     email,
     orders: userTx
+  });
+});
+
+// 4a. Confirm GCash Payment via Reference Number
+app.post("/api/portal/confirm-gcash-payment", (req, res) => {
+  const { orderId, referenceNumber } = req.body;
+  if (!orderId || !referenceNumber) {
+    return res.status(400).json({ error: "Order ID and GCash Reference Number are required." });
+  }
+
+  const tx = transactions.find(t => t.id === orderId);
+  if (!tx) {
+    return res.status(404).json({ error: "Order not found." });
+  }
+
+  tx.paymentReference = referenceNumber;
+  tx.status = "Completed";
+  tx.shippingStatus = "Processing";
+
+  res.json({
+    success: true,
+    message: "GCash reference number verified! Order approved for immediate shipping.",
+    transaction: tx
+  });
+});
+
+// 4b. Simulate Shipping Progress (For premium interactive tracking)
+app.post("/api/portal/simulate-shipping", (req, res) => {
+  const { orderId } = req.body;
+  if (!orderId) {
+    return res.status(400).json({ error: "Order ID is required." });
+  }
+
+  const tx = transactions.find(t => t.id === orderId);
+  if (!tx) {
+    return res.status(404).json({ error: "Order not found." });
+  }
+
+  const stages: ('Pending Payment' | 'Processing' | 'Shipped' | 'Out for Delivery' | 'Delivered')[] = [
+    'Pending Payment', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered'
+  ];
+  const currentIndex = stages.indexOf(tx.shippingStatus || 'Processing');
+  if (currentIndex < stages.length - 1) {
+    tx.shippingStatus = stages[currentIndex + 1];
+  } else {
+    // Reset back to Processing for infinite simulation delight
+    tx.shippingStatus = 'Processing';
+  }
+
+  res.json({
+    success: true,
+    message: `Shipping status updated to "${tx.shippingStatus}"!`,
+    transaction: tx
   });
 });
 
