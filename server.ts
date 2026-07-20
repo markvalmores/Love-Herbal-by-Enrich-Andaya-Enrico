@@ -3,13 +3,32 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
+import multer from "multer";
+import fs from "fs";
 
 dotenv.config();
+
+// Ensure upload directory exists
+if (!fs.existsSync('uploads')) {
+    fs.mkdirSync('uploads');
+}
+
+// Configure multer
+const upload = multer({ dest: 'uploads/' });
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+app.use('/uploads', express.static('uploads'));
+
+// File upload endpoint
+app.post("/api/upload", upload.single("file"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded" });
+  }
+  res.json({ fileUrl: `/uploads/${req.file.filename}` });
+});
 
 // Initialize Gemini Client
 const ai = process.env.GEMINI_API_KEY

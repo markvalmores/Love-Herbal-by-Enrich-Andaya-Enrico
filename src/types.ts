@@ -81,6 +81,7 @@ export interface CommunityPost {
   reactions: { [emoji: string]: string[] }; // Emoji to emails mapping
   comments: PostComment[];
   createdAt: string;
+  mediaUrl?: string;
 }
 
 export interface GroupMessage {

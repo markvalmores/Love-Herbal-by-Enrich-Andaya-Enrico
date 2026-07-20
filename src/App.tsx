@@ -40,7 +40,8 @@ import {
   MessageCircle,
   Smile,
   PlusCircle,
-  Globe
+  Globe,
+  Paperclip
 } from "lucide-react";
 import { 
   Product, 
@@ -59,6 +60,21 @@ export default function App() {
   // State variables
   const [showTitleScreen, setShowTitleScreen] = useState(true);
   const [activeTab, setActiveTab] = useState<"store" | "cart" | "support" | "portal" | "dashboard" | "about" | "community" | "messenger">("store");
+  
+  const chatFileRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData
+    });
+    
+    const data = await res.json();
+    return data.fileUrl; // This will be the URL to the uploaded file
+  }
   const [products, setProducts] = useState<Product[]>([
     {
       id: "prod-glowtah",
@@ -192,14 +208,24 @@ export default function App() {
   const [showPassword, setShowPassword] = useState(false);
 
   // --- CUSTOM AUTH, COMMUNITY, MESSENGER & SUPPORT TICKET STATES ---
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
-    const saved = localStorage.getItem("love_herbal_user");
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [allProfiles, setAllProfiles] = useState<UserProfile[]>([]);
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [groupChats, setGroupChats] = useState<GroupChat[]>([]);
   const [complaints, setComplaints] = useState<SupportComplaint[]>([]);
+
+  // Session timeout check
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (currentUser) {
+        const loginTime = localStorage.getItem("loginTime");
+        if (loginTime && (Date.now() - parseInt(loginTime)) > 34 * 60 * 1000) {
+          handleAuthLogout();
+        }
+      }
+    }, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [currentUser]);
 
   // Auth Modal form inputs
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -214,6 +240,8 @@ export default function App() {
   const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostCategory, setNewPostCategory] = useState("General Tips");
+  const [postMediaUrl, setPostMediaUrl] = useState("");
+  const postFileRef = useRef<HTMLInputElement>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [newCommentText, setNewCommentText] = useState<{ [postId: string]: string }>({});
@@ -386,6 +414,7 @@ export default function App() {
       }
       setCurrentUser(data.user);
       localStorage.setItem("love_herbal_user", JSON.stringify(data.user));
+      localStorage.setItem("loginTime", Date.now().toString());
       setShowAuthModal(false);
       addSystemAlert("success", `Welcome to Love Herbal, ${data.user.username}!`);
       fetchProfiles();
@@ -421,6 +450,7 @@ export default function App() {
       }
       setCurrentUser(data.user);
       localStorage.setItem("love_herbal_user", JSON.stringify(data.user));
+      localStorage.setItem("loginTime", Date.now().toString());
       setShowAuthModal(false);
       addSystemAlert("success", `Welcome back, ${data.user.username}!`);
       
@@ -443,6 +473,7 @@ export default function App() {
   const handleAuthLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem("love_herbal_user");
+    localStorage.removeItem("loginTime");
     setIsDashboardUnlocked(false);
     addSystemAlert("info", "Logged out successfully. See you soon!");
   };
@@ -508,7 +539,8 @@ export default function App() {
           authorEmail: currentUser.email,
           title: newPostTitle,
           content: newPostContent,
-          category: newPostCategory
+          category: newPostCategory,
+          mediaUrl: postMediaUrl
         })
       });
       const data = await res.json();
@@ -520,6 +552,7 @@ export default function App() {
       setShowCreatePost(false);
       setNewPostTitle("");
       setNewPostContent("");
+      setPostMediaUrl("");
       fetchCommunityPosts();
     } catch (err) {
       console.error(err);
@@ -1783,6 +1816,24 @@ export default function App() {
                       placeholder="Ask me about Moringa, Banaba Tea, Lagundi, or wellness..."
                       className="flex-1 bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-emerald-500 font-medium"
                     />
+                    <input
+                      type="file"
+                      ref={chatFileRef}
+                      onChange={async (e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const fileUrl = await handleFileUpload(e.target.files[0]);
+                          setChatInput(prev => prev + ` ${fileUrl}`);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => chatFileRef.current?.click()}
+                      className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl"
+                    >
+                      <Paperclip className="w-4 h-4" />
+                    </button>
                     <button
                       id="send-chat-message"
                       type="submit"
@@ -2424,6 +2475,28 @@ export default function App() {
                             placeholder="e.g., Banaba tea completely cured my bloating!"
                             className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 font-medium text-slate-900 bg-white"
                           />
+                        </div>
+
+                        <div className="md:col-span-1 flex items-end">
+                           <button
+                             type="button"
+                             onClick={() => postFileRef.current?.click()}
+                             className="w-full text-xs p-3 border border-slate-200 rounded-xl bg-slate-50 flex items-center justify-center space-x-2"
+                           >
+                             <Paperclip className="w-4 h-4" />
+                             <span>{postMediaUrl ? "Media Attached" : "Attach Media"}</span>
+                           </button>
+                           <input
+                             type="file"
+                             ref={postFileRef}
+                             onChange={async (e) => {
+                               if (e.target.files && e.target.files[0]) {
+                                 const fileUrl = await handleFileUpload(e.target.files[0]);
+                                 setPostMediaUrl(fileUrl);
+                               }
+                             }}
+                             className="hidden"
+                           />
                         </div>
 
                         <div className="md:col-span-1">
