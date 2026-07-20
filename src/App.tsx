@@ -822,6 +822,7 @@ export default function App() {
           })),
           paymentMethod,
           referenceNumber: paymentMethod === "GCash" ? referenceNumber : undefined,
+          totalAmount: cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
           shippingAddress: shippingAddress || undefined
         })
       });

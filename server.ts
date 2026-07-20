@@ -656,14 +656,14 @@ app.post("/api/extract-facebook-media", async (req, res) => {
 
 // 3. Automated checkout / purchase system
 app.post("/api/checkout", (req, res) => {
-  const { customerName, customerEmail, cartItems, paymentMethod, referenceNumber, shippingAddress } = req.body;
+  const { customerName, customerEmail, cartItems, paymentMethod, referenceNumber, shippingAddress, totalAmount } = req.body;
 
   if (!customerName || !customerEmail || !cartItems || cartItems.length === 0 || !paymentMethod) {
     return res.status(400).json({ error: "Missing checkout parameters" });
   }
 
   // Double check and deduct inventory
-  let totalAmount = 0;
+  let calculatedTotal = 0;
   const itemsSummary: any[] = [];
   const errors: string[] = [];
 
@@ -677,6 +677,11 @@ app.post("/api/checkout", (req, res) => {
       errors.push(`Insufficient inventory for ${product.name}. Requested: ${item.quantity}, Available: ${product.stock}`);
       continue;
     }
+    calculatedTotal += product.price * item.quantity;
+  }
+
+  if (totalAmount !== calculatedTotal) {
+      return res.status(400).json({ error: "Price mismatch. Please refresh." });
   }
 
   if (errors.length > 0) {
@@ -687,7 +692,6 @@ app.post("/api/checkout", (req, res) => {
   for (const item of cartItems) {
     const product = products.find(p => p.id === item.productId)!;
     product.stock -= item.quantity;
-    totalAmount += product.price * item.quantity;
     itemsSummary.push({
       productId: product.id,
       productName: product.name,
@@ -698,6 +702,15 @@ app.post("/api/checkout", (req, res) => {
 
   // Generate unique transactional IDs
   const txId = "tx-" + Math.floor(1000 + Math.random() * 9000);
+
+  // Validate payment if GCash
+  if (paymentMethod === "GCash") {
+    if (!referenceNumber || !/^\d{13}$/.test(referenceNumber)) {
+      return res.status(400).json({ error: "Invalid or missing GCash reference number. Must be exactly 13 digits." });
+    }
+  }
+
+  // Record transaction
   const orNumber = "OR-" + new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, '0') + String(new Date().getDate()).padStart(2, '0') + "-" + Math.floor(1000 + Math.random() * 9000);
 
   // If GCash is selected, check if they passed referenceNumber. If not, it can start as Pending Payment status
