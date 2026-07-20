@@ -85,6 +85,136 @@ let products = [
 // Initial transactions store
 let transactions = [];
 
+// In-memory Stores for Community, Auth, Messenger & Complaints
+let users = [
+  {
+    email: "andayaenrico55@gmail.com",
+    username: "Enrico Andaya (Admin)",
+    password: "admin",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+    bio: "Official founder & traditional herbalist of Love Herbal. Helping you navigate your wellness journey!",
+    followers: ["marie.santos@gmail.com", "jose_v@yahoo.com"],
+    following: ["marie.santos@gmail.com"],
+    createdAt: new Date().toISOString(),
+    role: "admin"
+  },
+  {
+    email: "marie.santos@gmail.com",
+    username: "MarieSantos",
+    password: "user123",
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+    bio: "Detoxification & glowing skin advocate! Love GLOWTAH Coffee ❤️",
+    followers: ["andayaenrico55@gmail.com"],
+    following: ["andayaenrico55@gmail.com", "liza_reyes@gmail.com"],
+    createdAt: new Date().toISOString(),
+    role: "user"
+  },
+  {
+    email: "jose_v@yahoo.com",
+    username: "JoseValdez",
+    password: "user123",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+    bio: "BUFFALO herbal mix drinker. Daily energy for training!",
+    followers: [],
+    following: ["andayaenrico55@gmail.com"],
+    createdAt: new Date().toISOString(),
+    role: "user"
+  },
+  {
+    email: "liza_reyes@gmail.com",
+    username: "LizaReyes",
+    password: "user123",
+    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80",
+    bio: "Holistic wellness blogger. Live healthy, drink herbal.",
+    followers: ["marie.santos@gmail.com"],
+    following: [],
+    createdAt: new Date().toISOString(),
+    role: "user"
+  }
+];
+
+let posts: any[] = [
+  {
+    id: "post-1",
+    authorEmail: "marie.santos@gmail.com",
+    authorUsername: "MarieSantos",
+    authorAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+    title: "My 3-Week GLOWTAH Coffee Transformation! ✨",
+    content: "Hi everyone! I just wanted to share my experience drinking the GLOWTAH Herbal Coffee Mix. I've been taking it every morning for three weeks now. My skin feels so much more hydrated, and my morning sluggishness is completely gone! Plus, it has Collagen and Ashwagandha. Anyone else noticing anti-aging benefits?",
+    category: "Glowtah Benefits",
+    upvotes: ["liza_reyes@gmail.com", "andayaenrico55@gmail.com"],
+    downvotes: [],
+    reactions: { "❤️": ["liza_reyes@gmail.com"], "🌿": ["andayaenrico55@gmail.com"] },
+    comments: [
+      {
+        id: "comment-1-1",
+        authorEmail: "andayaenrico55@gmail.com",
+        authorUsername: "Enrico Andaya (Admin)",
+        authorAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+        content: "Thank you for sharing your journey, Marie! The Ashwagandha and Glutathione synergy in GLOWTAH is custom formulated to aid detoxification and reduce stress. Stay healthy!",
+        createdAt: new Date(Date.now() - 3600000 * 23).toISOString()
+      }
+    ],
+    createdAt: new Date(Date.now() - 3600000 * 24).toISOString()
+  },
+  {
+    id: "post-2",
+    authorEmail: "jose_v@yahoo.com",
+    authorUsername: "JoseValdez",
+    authorAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+    title: "BUFFALO Mix vs. Regular Espresso for Workout Pre-workout?",
+    content: "Personally, regular espresso gives me severe acid reflux and crashes. The BUFFALO Coffee has Tongkat Ali & Ginseng which feels like a smooth, sustained boost of energy. Highly recommended before high-intensity training!",
+    category: "Herbal Tips",
+    upvotes: ["marie.santos@gmail.com"],
+    downvotes: [],
+    reactions: { "💪": ["marie.santos@gmail.com"] },
+    comments: [],
+    createdAt: new Date(Date.now() - 3600000 * 5).toISOString()
+  }
+];
+
+let groupChats = [
+  {
+    id: "gc-general",
+    name: "🌿 Love Herbal Community GC",
+    description: "The official public group chat for herbal formulations, wellness queries, and health advice.",
+    createdBy: "andayaenrico55@gmail.com",
+    memberEmails: ["andayaenrico55@gmail.com", "marie.santos@gmail.com", "jose_v@yahoo.com", "liza_reyes@gmail.com"],
+    messages: [
+      {
+        id: "msg-1",
+        senderEmail: "andayaenrico55@gmail.com",
+        senderUsername: "Enrico Andaya (Admin)",
+        senderAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+        content: "Welcome to the Love Herbal Community GC! Feel free to ask questions about our capsules, teas, or wellness coffee blends. Stay healthy!",
+        createdAt: new Date(Date.now() - 3600000 * 12).toISOString()
+      },
+      {
+        id: "msg-2",
+        senderEmail: "marie.santos@gmail.com",
+        senderUsername: "MarieSantos",
+        senderAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+        content: "Hello everyone! Happy to be here! Just ordered my next batch of Vitamin C 🌿",
+        createdAt: new Date(Date.now() - 3600000 * 11).toISOString()
+      }
+    ],
+    createdAt: new Date(Date.now() - 3600000 * 24).toISOString()
+  }
+];
+
+let complaints = [
+  {
+    id: "complaint-1",
+    customerName: "Andres Bonifacio",
+    customerEmail: "andres@philippines.org",
+    subject: "GCash Transfer Status Check",
+    message: "Good day, Enrico! Just sent my GCash payment of ₱275 for Buffalo Coffee. Please verify. Thanks!",
+    status: "Pending",
+    createdAt: new Date().toISOString()
+  }
+];
+
+
 // Helper to check for low stock alert
 function checkLowStockAlerts() {
   const alerts: string[] = [];
@@ -97,6 +227,412 @@ function checkLowStockAlerts() {
 }
 
 // API Routes
+
+// --- COMMUNITY, MESSENGER, AUTH & SUPPORT COMPLAINTS SYSTEM ---
+
+// Auth - Register
+app.post("/api/auth/register", (req, res) => {
+  const { email, username, password, avatar, bio } = req.body;
+  if (!email || !username || !password) {
+    return res.status(400).json({ error: "Email, username, and password are required." });
+  }
+  const emailLower = email.toLowerCase();
+  const existing = users.find(u => u.email.toLowerCase() === emailLower);
+  if (existing) {
+    return res.status(400).json({ error: "Email is already registered." });
+  }
+
+  const newUser = {
+    email: emailLower,
+    username,
+    password,
+    avatar: avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(username)}`,
+    bio: bio || "Love Herbal wellness traveler.",
+    followers: [] as string[],
+    following: [] as string[],
+    createdAt: new Date().toISOString(),
+    role: emailLower === "andayaenrico55@gmail.com" ? ("admin" as const) : ("user" as const)
+  };
+  users.push(newUser);
+
+  // Auto-subscribe to default community GC
+  const generalGc = groupChats.find(g => g.id === "gc-general");
+  if (generalGc && !generalGc.memberEmails.includes(emailLower)) {
+    generalGc.memberEmails.push(emailLower);
+  }
+
+  const { password: _, ...profile } = newUser;
+  res.json({ success: true, user: profile });
+});
+
+// Auth - Login
+app.post("/api/auth/login", (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password are required." });
+  }
+  const emailLower = email.toLowerCase();
+  const user = users.find(u => u.email.toLowerCase() === emailLower);
+  if (!user || user.password !== password) {
+    return res.status(401).json({ error: "Invalid email or password." });
+  }
+
+  const { password: _, ...profile } = user;
+  res.json({ success: true, user: profile });
+});
+
+// Auth - Profile Update
+app.post("/api/auth/profile/update", (req, res) => {
+  const { email, username, avatar, bio } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: "Email is required." });
+  }
+  const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  if (!user) {
+    return res.status(404).json({ error: "User not found." });
+  }
+
+  if (username) user.username = username;
+  if (avatar) user.avatar = avatar;
+  if (bio !== undefined) user.bio = bio;
+
+  // Propagate updates to posts, comments & GC messages
+  const emailLower = email.toLowerCase();
+  posts.forEach(p => {
+    if (p.authorEmail.toLowerCase() === emailLower) {
+      if (username) p.authorUsername = username;
+      if (avatar) p.authorAvatar = avatar;
+    }
+    p.comments.forEach(c => {
+      if (c.authorEmail.toLowerCase() === emailLower) {
+        if (username) c.authorUsername = username;
+        if (avatar) c.authorAvatar = avatar;
+      }
+    });
+  });
+
+  groupChats.forEach(g => {
+    g.messages.forEach(m => {
+      if (m.senderEmail.toLowerCase() === emailLower) {
+        if (username) m.senderUsername = username;
+        if (avatar) m.senderAvatar = avatar;
+      }
+    });
+  });
+
+  const { password: _, ...profile } = user;
+  res.json({ success: true, user: profile });
+});
+
+// Users - List all public profiles
+app.get("/api/users", (req, res) => {
+  const safeProfiles = users.map(({ password, ...u }) => u);
+  res.json(safeProfiles);
+});
+
+// Users - Follow/Unfollow
+app.post("/api/users/follow", (req, res) => {
+  const { followerEmail, targetEmail } = req.body;
+  if (!followerEmail || !targetEmail) {
+    return res.status(400).json({ error: "Follower and target emails are required." });
+  }
+  const fEmail = followerEmail.toLowerCase();
+  const tEmail = targetEmail.toLowerCase();
+
+  if (fEmail === tEmail) {
+    return res.status(400).json({ error: "You cannot follow yourself." });
+  }
+
+  const followerUser = users.find(u => u.email.toLowerCase() === fEmail);
+  const targetUser = users.find(u => u.email.toLowerCase() === tEmail);
+
+  if (!followerUser || !targetUser) {
+    return res.status(404).json({ error: "User profiles not found." });
+  }
+
+  const isFollowing = followerUser.following.includes(tEmail);
+  if (isFollowing) {
+    followerUser.following = followerUser.following.filter(e => e !== tEmail);
+    targetUser.followers = targetUser.followers.filter(e => e !== fEmail);
+  } else {
+    followerUser.following.push(tEmail);
+    targetUser.followers.push(fEmail);
+  }
+
+  res.json({
+    success: true,
+    follower: { email: followerUser.email, following: followerUser.following },
+    target: { email: targetUser.email, followers: targetUser.followers },
+    isFollowing: !isFollowing
+  });
+});
+
+// Community - List all posts
+app.get("/api/posts", (req, res) => {
+  res.json(posts);
+});
+
+// Community - Create a post
+app.post("/api/posts", (req, res) => {
+  const { authorEmail, title, content, category } = req.body;
+  if (!authorEmail || !title || !content || !category) {
+    return res.status(400).json({ error: "Missing required post parameters." });
+  }
+
+  const user = users.find(u => u.email.toLowerCase() === authorEmail.toLowerCase());
+  if (!user) {
+    return res.status(404).json({ error: "Author profile not registered." });
+  }
+
+  const newPost = {
+    id: "post-" + Date.now(),
+    authorEmail: user.email,
+    authorUsername: user.username,
+    authorAvatar: user.avatar,
+    title,
+    content,
+    category,
+    upvotes: [user.email], // auto upvote on create
+    downvotes: [] as string[],
+    reactions: {} as { [emoji: string]: string[] },
+    comments: [] as any[],
+    createdAt: new Date().toISOString()
+  };
+
+  posts.unshift(newPost);
+  res.json({ success: true, post: newPost });
+});
+
+// Community - Upvote / Downvote
+app.post("/api/posts/vote", (req, res) => {
+  const { postId, email, voteType } = req.body; // 'up' | 'down' | 'none'
+  if (!postId || !email) {
+    return res.status(400).json({ error: "Post ID and voter email required." });
+  }
+  const post = posts.find(p => p.id === postId);
+  if (!post) {
+    return res.status(404).json({ error: "Post not found." });
+  }
+
+  const voterEmail = email.toLowerCase();
+  post.upvotes = post.upvotes.filter(e => e !== voterEmail);
+  post.downvotes = post.downvotes.filter(e => e !== voterEmail);
+
+  if (voteType === "up") {
+    post.upvotes.push(voterEmail);
+  } else if (voteType === "down") {
+    post.downvotes.push(voterEmail);
+  }
+
+  res.json({ success: true, upvotes: post.upvotes, downvotes: post.downvotes });
+});
+
+// Community - Emoji React
+app.post("/api/posts/react", (req, res) => {
+  const { postId, email, emoji } = req.body;
+  if (!postId || !email || !emoji) {
+    return res.status(400).json({ error: "Post ID, email, and emoji are required." });
+  }
+  const post = posts.find(p => p.id === postId);
+  if (!post) {
+    return res.status(404).json({ error: "Post not found." });
+  }
+
+  const userEmail = email.toLowerCase();
+  if (!post.reactions) post.reactions = {};
+  if (!post.reactions[emoji]) post.reactions[emoji] = [];
+
+  const hasReacted = post.reactions[emoji].includes(userEmail);
+  if (hasReacted) {
+    post.reactions[emoji] = post.reactions[emoji].filter(e => e !== userEmail);
+    if (post.reactions[emoji].length === 0) {
+      delete post.reactions[emoji];
+    }
+  } else {
+    post.reactions[emoji].push(userEmail);
+  }
+
+  res.json({ success: true, reactions: post.reactions });
+});
+
+// Community - Comment
+app.post("/api/posts/comment", (req, res) => {
+  const { postId, authorEmail, content } = req.body;
+  if (!postId || !authorEmail || !content) {
+    return res.status(400).json({ error: "Missing required comment parameters." });
+  }
+  const post = posts.find(p => p.id === postId);
+  if (!post) {
+    return res.status(404).json({ error: "Post not found." });
+  }
+
+  const user = users.find(u => u.email.toLowerCase() === authorEmail.toLowerCase());
+  if (!user) {
+    return res.status(404).json({ error: "User profile not found." });
+  }
+
+  const newComment = {
+    id: "comment-" + Date.now(),
+    authorEmail: user.email,
+    authorUsername: user.username,
+    authorAvatar: user.avatar,
+    content,
+    createdAt: new Date().toISOString()
+  };
+
+  post.comments.push(newComment);
+  res.json({ success: true, comment: newComment });
+});
+
+// Messenger - List all Group Chats
+app.get("/api/chats", (req, res) => {
+  res.json(groupChats);
+});
+
+// Messenger - Create Group Chat
+app.post("/api/chats", (req, res) => {
+  const { name, description, createdBy, memberEmails } = req.body;
+  if (!name || !createdBy) {
+    return res.status(400).json({ error: "Group name and creator email are required." });
+  }
+
+  const user = users.find(u => u.email.toLowerCase() === createdBy.toLowerCase());
+  if (!user) {
+    return res.status(404).json({ error: "Creator user profile not found." });
+  }
+
+  const uniqueMembers = Array.from(new Set([user.email, ...(memberEmails || []).map((e: string) => e.toLowerCase())]));
+
+  const newGc = {
+    id: "gc-" + Date.now(),
+    name,
+    description: description || "A new real-time wellness group conversation.",
+    createdBy: user.email,
+    memberEmails: uniqueMembers,
+    messages: [
+      {
+        id: "msg-welcome-" + Date.now(),
+        senderEmail: "andayaenrico55@gmail.com",
+        senderUsername: "Enrico Andaya (Admin)",
+        senderAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+        content: `Welcome to the new Group Chat: "${name}"! Let's talk wellness together.`,
+        createdAt: new Date().toISOString()
+      }
+    ],
+    createdAt: new Date().toISOString()
+  };
+
+  groupChats.push(newGc);
+  res.json({ success: true, chat: newGc });
+});
+
+// Messenger - Join Group Chat
+app.post("/api/chats/join", (req, res) => {
+  const { chatId, email } = req.body;
+  if (!chatId || !email) {
+    return res.status(400).json({ error: "Chat ID and user email are required." });
+  }
+
+  const gc = groupChats.find(g => g.id === chatId);
+  if (!gc) {
+    return res.status(404).json({ error: "Group Chat not found." });
+  }
+
+  const userEmail = email.toLowerCase();
+  const user = users.find(u => u.email.toLowerCase() === userEmail);
+  if (!user) {
+    return res.status(404).json({ error: "User profile not found." });
+  }
+
+  if (!gc.memberEmails.includes(userEmail)) {
+    gc.memberEmails.push(userEmail);
+    gc.messages.push({
+      id: "msg-join-" + Date.now(),
+      senderEmail: "andayaenrico55@gmail.com",
+      senderUsername: "System Dispatcher",
+      senderAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      content: `${user.username} joined the chat room.`,
+      createdAt: new Date().toISOString()
+    });
+  }
+
+  res.json({ success: true, chat: gc });
+});
+
+// Messenger - Send Message in GC
+app.post("/api/chats/message", (req, res) => {
+  const { chatId, senderEmail, content } = req.body;
+  if (!chatId || !senderEmail || !content) {
+    return res.status(400).json({ error: "Missing required chat parameters." });
+  }
+
+  const gc = groupChats.find(g => g.id === chatId);
+  if (!gc) {
+    return res.status(404).json({ error: "Group Chat not found." });
+  }
+
+  const user = users.find(u => u.email.toLowerCase() === senderEmail.toLowerCase());
+  if (!user) {
+    return res.status(404).json({ error: "Sender profile not found." });
+  }
+
+  const newMessage = {
+    id: "msg-" + Date.now(),
+    senderEmail: user.email,
+    senderUsername: user.username,
+    senderAvatar: user.avatar,
+    content,
+    createdAt: new Date().toISOString()
+  };
+
+  gc.messages.push(newMessage);
+  res.json({ success: true, message: newMessage });
+});
+
+// Complaints / Support Feedback (Sent to andayaenrico55@gmail.com)
+app.post("/api/complaints", (req, res) => {
+  const { customerName, customerEmail, subject, message } = req.body;
+  if (!customerName || !customerEmail || !subject || !message) {
+    return res.status(400).json({ error: "All feedback/complaint parameters are required." });
+  }
+
+  const newComplaint = {
+    id: "complaint-" + Date.now(),
+    customerName,
+    customerEmail,
+    subject,
+    message,
+    status: 'Pending' as const,
+    createdAt: new Date().toISOString()
+  };
+
+  complaints.push(newComplaint);
+
+  res.json({
+    success: true,
+    message: "Thank you. Your message has been sent to Enrico Andaya (andayaenrico55@gmail.com). We will get back to you shortly!",
+    complaint: newComplaint
+  });
+});
+
+// Complaints - Get list
+app.get("/api/complaints", (req, res) => {
+  res.json(complaints);
+});
+
+// Complaints - Resolve
+app.post("/api/complaints/resolve", (req, res) => {
+  const { complaintId } = req.body;
+  const complaint = complaints.find(c => c.id === complaintId);
+  if (!complaint) {
+    return res.status(404).json({ error: "Complaint not found." });
+  }
+  complaint.status = "Resolved";
+  res.json({ success: true, complaint });
+});
+
+// --- END COMMUNITY, MESSENGER, AUTH & SUPPORT COMPLAINTS ---
+
 
 // 1. Get products list
 app.get("/api/products", (req, res) => {

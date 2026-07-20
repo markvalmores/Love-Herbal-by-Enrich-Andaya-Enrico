@@ -17,6 +17,8 @@ import {
   Search, 
   X, 
   ChevronRight, 
+  ChevronUp,
+  ChevronDown,
   Activity, 
   Award,
   Sparkles,
@@ -25,15 +27,38 @@ import {
   Minus,
   CheckCircle,
   HelpCircle,
-  Clock
+  Clock,
+  Lock,
+  Unlock,
+  Users,
+  ThumbsUp,
+  ThumbsDown,
+  Send,
+  LogOut,
+  LogIn,
+  UserPlus,
+  MessageCircle,
+  Smile,
+  PlusCircle,
+  Globe
 } from "lucide-react";
-import { Product, Transaction, ChatMessage, SystemAlert } from "./types";
+import { 
+  Product, 
+  Transaction, 
+  ChatMessage, 
+  SystemAlert,
+  UserProfile,
+  CommunityPost,
+  GroupChat,
+  GroupMessage,
+  SupportComplaint
+} from "./types";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function App() {
   // State variables
   const [showTitleScreen, setShowTitleScreen] = useState(true);
-  const [activeTab, setActiveTab] = useState<"store" | "cart" | "support" | "portal" | "dashboard" | "about">("store");
+  const [activeTab, setActiveTab] = useState<"store" | "cart" | "support" | "portal" | "dashboard" | "about" | "community" | "messenger">("store");
   const [products, setProducts] = useState<Product[]>([]);
   const [stockAlerts, setStockAlerts] = useState<string[]>([]);
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
@@ -98,6 +123,116 @@ export default function App() {
 
   // Social Sharing Achivements
   const [sharedMessage, setSharedMessage] = useState("");
+
+  // Dashboard Lock & Forgot Password states
+  const [isDashboardUnlocked, setIsDashboardUnlocked] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("admin123");
+  const [inputPassword, setInputPassword] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotAnswer, setForgotAnswer] = useState("");
+  const [forgotNewPass, setForgotNewPass] = useState("");
+  const [forgotStep, setForgotStep] = useState<"verify" | "reset" | "success">("verify");
+  const [showPassword, setShowPassword] = useState(false);
+
+  // --- CUSTOM AUTH, COMMUNITY, MESSENGER & SUPPORT TICKET STATES ---
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
+    const saved = localStorage.getItem("love_herbal_user");
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [allProfiles, setAllProfiles] = useState<UserProfile[]>([]);
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [groupChats, setGroupChats] = useState<GroupChat[]>([]);
+  const [complaints, setComplaints] = useState<SupportComplaint[]>([]);
+
+  // Auth Modal form inputs
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authTab, setAuthTab] = useState<"login" | "register">("login");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authUsername, setAuthUsername] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authBio, setAuthBio] = useState("");
+  const [authAvatar, setAuthAvatar] = useState("");
+
+  // Forums inputs
+  const [newPostTitle, setNewPostTitle] = useState("");
+  const [newPostContent, setNewPostContent] = useState("");
+  const [newPostCategory, setNewPostCategory] = useState("General Tips");
+  const [showCreatePost, setShowCreatePost] = useState(false);
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
+  const [newCommentText, setNewCommentText] = useState<{ [postId: string]: string }>({});
+
+  // Group Chats inputs
+  const [activeGcId, setActiveGcId] = useState<string>("gc-general");
+  const [newGcName, setNewGcName] = useState("");
+  const [newGcDesc, setNewGcDesc] = useState("");
+  const [newGcMembers, setNewGcMembers] = useState<string[]>([]);
+  const [showCreateGcModal, setShowCreateGcModal] = useState(false);
+  const [chatInputMessage, setChatInputMessage] = useState("");
+  const [communityCategoryFilter, setCommunityCategoryFilter] = useState("All");
+
+  // Complaints form inputs
+  const [complaintSubject, setComplaintSubject] = useState("");
+  const [complaintMessage, setComplaintMessage] = useState("");
+  const [isSubmittingComplaint, setIsSubmittingComplaint] = useState(false);
+
+  const fetchProfiles = async () => {
+    try {
+      const res = await fetch("/api/users");
+      const data = await res.json();
+      setAllProfiles(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchCommunityPosts = async () => {
+    try {
+      const res = await fetch("/api/posts");
+      const data = await res.json();
+      setPosts(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchGroupChats = async () => {
+    try {
+      const res = await fetch("/api/chats");
+      const data = await res.json();
+      setGroupChats(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchComplaints = async () => {
+    try {
+      const res = await fetch("/api/complaints");
+      const data = await res.json();
+      setComplaints(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Sync all on mount and on poll
+  useEffect(() => {
+    fetchProfiles();
+    fetchCommunityPosts();
+    fetchGroupChats();
+    fetchComplaints();
+
+    // Poll chat, posts and complaints every 3 seconds for real-time vibe
+    const interval = setInterval(() => {
+      fetchCommunityPosts();
+      fetchGroupChats();
+      fetchComplaints();
+      fetchProfiles();
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch products and dashboard data on load
   useEffect(() => {
@@ -180,6 +315,384 @@ export default function App() {
       addSystemAlert("success", "Real-time wellness and inventory alerts have been enabled!");
     } else {
       addSystemAlert("info", "Silent mode active. Alerts will display in-app only.");
+    }
+  };
+
+  // --- AUTH, SOCIAL, COMMUNITY & TICKET API HANDLERS ---
+  const handleAuthRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authEmail || !authUsername || !authPassword) {
+      addSystemAlert("warning", "Please fill in all registration fields.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: authEmail,
+          username: authUsername,
+          password: authPassword,
+          bio: authBio,
+          avatar: authAvatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(authUsername)}`
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        addSystemAlert("warning", data.error || "Registration failed.");
+        return;
+      }
+      setCurrentUser(data.user);
+      localStorage.setItem("love_herbal_user", JSON.stringify(data.user));
+      setShowAuthModal(false);
+      addSystemAlert("success", `Welcome to Love Herbal, ${data.user.username}!`);
+      fetchProfiles();
+      
+      // Clear inputs
+      setAuthEmail("");
+      setAuthUsername("");
+      setAuthPassword("");
+      setAuthBio("");
+      setAuthAvatar("");
+    } catch (err) {
+      console.error(err);
+      addSystemAlert("warning", "Network error during registration.");
+    }
+  };
+
+  const handleAuthLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authEmail || !authPassword) {
+      addSystemAlert("warning", "Please enter both email and password.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: authEmail, password: authPassword })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        addSystemAlert("warning", data.error || "Login failed.");
+        return;
+      }
+      setCurrentUser(data.user);
+      localStorage.setItem("love_herbal_user", JSON.stringify(data.user));
+      setShowAuthModal(false);
+      addSystemAlert("success", `Welcome back, ${data.user.username}!`);
+      
+      // Auto-unlock dashboard if logging in as Enrico
+      if (data.user.email === "andayaenrico55@gmail.com") {
+        setIsDashboardUnlocked(true);
+        addSystemAlert("success", "Merchant partner admin panel unlocked!");
+      }
+      fetchProfiles();
+      
+      // Clear inputs
+      setAuthEmail("");
+      setAuthPassword("");
+    } catch (err) {
+      console.error(err);
+      addSystemAlert("warning", "Network error during login.");
+    }
+  };
+
+  const handleAuthLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem("love_herbal_user");
+    setIsDashboardUnlocked(false);
+    addSystemAlert("info", "Logged out successfully. See you soon!");
+  };
+
+  const handleAuthSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (authTab === "login") {
+      handleAuthLogin(e);
+    } else {
+      handleAuthRegister(e);
+    }
+  };
+
+  const handleFollowToggle = async (targetEmail: string) => {
+    if (!currentUser) {
+      setAuthTab("login");
+      setShowAuthModal(true);
+      addSystemAlert("warning", "Please sign in to follow wellness partners.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/users/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ followerEmail: currentUser.email, targetEmail })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        addSystemAlert("warning", data.error || "Action failed.");
+        return;
+      }
+      addSystemAlert("success", data.isFollowing ? `You followed ${targetEmail}` : `You unfollowed ${targetEmail}`);
+      fetchProfiles();
+      
+      // Sync local user follow state if follower matches current
+      if (currentUser.email === data.follower.email) {
+        const updated = { ...currentUser, following: data.follower.following };
+        setCurrentUser(updated);
+        localStorage.setItem("love_herbal_user", JSON.stringify(updated));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCreatePost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) {
+      setAuthTab("login");
+      setShowAuthModal(true);
+      addSystemAlert("warning", "Please sign in to share a post.");
+      return;
+    }
+    if (!newPostTitle || !newPostContent) {
+      addSystemAlert("warning", "Title and content cannot be empty.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          authorEmail: currentUser.email,
+          title: newPostTitle,
+          content: newPostContent,
+          category: newPostCategory
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        addSystemAlert("warning", data.error || "Failed to create post.");
+        return;
+      }
+      addSystemAlert("success", "Post shared to Love Herbal Community!");
+      setShowCreatePost(false);
+      setNewPostTitle("");
+      setNewPostContent("");
+      fetchCommunityPosts();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleVotePost = async (postId: string, type: 'up' | 'down') => {
+    if (!currentUser) {
+      setAuthTab("login");
+      setShowAuthModal(true);
+      addSystemAlert("warning", "Please sign in to vote on discussions.");
+      return;
+    }
+    
+    // Check current vote
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    
+    let targetType: 'up' | 'down' | 'none' = type;
+    const isUpvoted = post.upvotes.includes(currentUser.email);
+    const isDownvoted = post.downvotes.includes(currentUser.email);
+    
+    if (type === 'up' && isUpvoted) targetType = 'none';
+    if (type === 'down' && isDownvoted) targetType = 'none';
+
+    try {
+      await fetch("/api/posts/vote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId, email: currentUser.email, voteType: targetType })
+      });
+      fetchCommunityPosts();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleReactPost = async (postId: string, emoji: string) => {
+    if (!currentUser) {
+      setAuthTab("login");
+      setShowAuthModal(true);
+      addSystemAlert("warning", "Please sign in to add reactions.");
+      return;
+    }
+    try {
+      await fetch("/api/posts/react", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId, email: currentUser.email, emoji })
+      });
+      fetchCommunityPosts();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCommentPost = async (postId: string) => {
+    if (!currentUser) {
+      setAuthTab("login");
+      setShowAuthModal(true);
+      addSystemAlert("warning", "Please sign in to add comments.");
+      return;
+    }
+    const text = newCommentText[postId] || "";
+    if (!text.trim()) return;
+
+    try {
+      const res = await fetch("/api/posts/comment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId, authorEmail: currentUser.email, content: text })
+      });
+      if (res.ok) {
+        setNewCommentText(prev => ({ ...prev, [postId]: "" }));
+        fetchCommunityPosts();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCreateGC = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    if (!newGcName.trim()) {
+      addSystemAlert("warning", "Group chat name is required.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newGcName,
+          description: newGcDesc,
+          createdBy: currentUser.email,
+          memberEmails: newGcMembers
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        addSystemAlert("success", `Group Chat "${newGcName}" created successfully!`);
+        setShowCreateGcModal(false);
+        setNewGcName("");
+        setNewGcDesc("");
+        setNewGcMembers([]);
+        setActiveGcId(data.chat.id);
+        fetchGroupChats();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleJoinGC = async (chatId: string) => {
+    if (!currentUser) {
+      setAuthTab("login");
+      setShowAuthModal(true);
+      addSystemAlert("warning", "Please sign in to join GCs.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/chats/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatId, email: currentUser.email })
+      });
+      if (res.ok) {
+        addSystemAlert("success", "Joined group chat conversation.");
+        setActiveGcId(chatId);
+        fetchGroupChats();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSendGCMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) {
+      setAuthTab("login");
+      setShowAuthModal(true);
+      addSystemAlert("warning", "Please sign in to send messages.");
+      return;
+    }
+    if (!chatInputMessage.trim()) return;
+    try {
+      const res = await fetch("/api/chats/message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatId: activeGcId,
+          senderEmail: currentUser.email,
+          content: chatInputMessage
+        })
+      });
+      if (res.ok) {
+        setChatInputMessage("");
+        fetchGroupChats();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSendComplaint = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!complaintSubject.trim() || !complaintMessage.trim()) {
+      addSystemAlert("warning", "Subject and message are required.");
+      return;
+    }
+    const nameToUse = currentUser ? currentUser.username : "Guest Explorer";
+    const emailToUse = currentUser ? currentUser.email : "guest@loveherbal.com";
+
+    setIsSubmittingComplaint(true);
+    try {
+      const res = await fetch("/api/complaints", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: nameToUse,
+          customerEmail: emailToUse,
+          subject: complaintSubject,
+          message: complaintMessage
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        addSystemAlert("success", "Complaint/Feedback securely routed to andayaenrico55@gmail.com.");
+        setComplaintSubject("");
+        setComplaintMessage("");
+        fetchComplaints();
+      } else {
+        addSystemAlert("warning", data.error || "Submission failed.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmittingComplaint(false);
+    }
+  };
+
+  const handleResolveComplaint = async (complaintId: string) => {
+    try {
+      const res = await fetch("/api/complaints/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ complaintId })
+      });
+      if (res.ok) {
+        addSystemAlert("success", "Ticket resolved.");
+        fetchComplaints();
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -552,6 +1065,42 @@ export default function App() {
                 ₱{getCartTotal()}
               </span>
             </button>
+
+            {/* Authentication Control Badge */}
+            {currentUser ? (
+              <div className="flex items-center space-x-2 pl-2 border-l border-slate-200">
+                <img 
+                  src={currentUser.avatar} 
+                  alt={currentUser.username} 
+                  className="w-8 h-8 rounded-full border border-slate-200 object-cover" 
+                />
+                <div className="flex flex-col text-left max-w-[120px]">
+                  <span className="text-xs font-bold text-slate-800 truncate" title={currentUser.username}>{currentUser.username}</span>
+                  <span className="text-[10px] text-slate-500 font-mono leading-none truncate" title={currentUser.email}>{currentUser.email}</span>
+                </div>
+                <button 
+                  onClick={handleAuthLogout}
+                  className="p-1.5 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-500 rounded-lg cursor-pointer transition"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2 pl-2 border-l border-slate-200">
+                <button
+                  onClick={() => {
+                    setAuthTab("login");
+                    setShowAuthModal(true);
+                  }}
+                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition cursor-pointer flex items-center space-x-1"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Sign In</span>
+                </button>
+              </div>
+            )}
+
           </div>
         </div>
 
@@ -561,6 +1110,8 @@ export default function App() {
             { id: "store", label: "Shop Catalog", icon: Leaf },
             { id: "cart", label: "My Cart & Checkout", icon: ShoppingBag },
             { id: "portal", label: "Orders & Shipping Portal", icon: FileText },
+            { id: "community", label: "Reddit Forums", icon: Globe },
+            { id: "messenger", label: "Wellness GCs", icon: MessageCircle },
             { id: "support", label: "Usagyuun Wellness AI", icon: MessageSquare },
             { id: "dashboard", label: "Inventory & Audit", icon: TrendingUp },
             { id: "about", label: "Enrico's Heritage", icon: Award }
@@ -1222,28 +1773,89 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Quick questions list */}
-                  <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-3">
-                    <h4 className="font-display font-bold text-slate-900 text-xs uppercase tracking-wider">Common Questions</h4>
-                    <div className="flex flex-col space-y-2">
-                      {[
-                        "What is Banaba leaf tea best used for?",
-                        "How can I take pure Moringa capsules daily?",
-                        "Can Lagundi cure minor dry coughs?",
-                        "Is Sambong tea safe for daily kidney cleansing?"
-                      ].map((q, qIdx) => (
-                        <button
-                          key={qIdx}
-                          onClick={() => {
-                            setChatInput(q);
-                          }}
-                          className="w-full text-left p-2.5 hover:bg-slate-50 rounded-xl text-[11px] text-slate-700 font-medium border border-slate-100 hover:border-slate-200 transition-all flex items-center justify-between"
-                        >
-                          <span className="truncate">{q}</span>
-                          <ArrowRight className="w-3 h-3 text-slate-400 shrink-0 ml-1" />
-                        </button>
-                      ))}
+                  {/* Customer Service Tickets & Direct Complaints Box */}
+                  <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-4">
+                    <div className="border-b border-slate-100 pb-3">
+                      <h4 className="font-display font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center space-x-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span>Official Support Ticket Desk</span>
+                      </h4>
+                      <p className="text-[10px] text-slate-500 mt-1 leading-normal font-mono">
+                        Direct support dispatch to: <strong className="text-slate-900 font-semibold">andayaenrico55@gmail.com</strong>
+                      </p>
                     </div>
+
+                    <form onSubmit={handleSendComplaint} className="space-y-3">
+                      <div>
+                        <label className="text-[10px] uppercase font-mono font-bold text-slate-500 block mb-1">Ticket Subject</label>
+                        <input 
+                          type="text"
+                          required
+                          value={complaintSubject}
+                          onChange={(e) => setComplaintSubject(e.target.value)}
+                          placeholder="e.g., Shipping Delay, Incorrect Formulation..."
+                          className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 font-medium text-slate-900 bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] uppercase font-mono font-bold text-slate-500 block mb-1">Issue Details / Complaint</label>
+                        <textarea 
+                          required
+                          rows={3}
+                          value={complaintMessage}
+                          onChange={(e) => setComplaintMessage(e.target.value)}
+                          placeholder="Provide order reference or describe your health query here..."
+                          className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 font-medium text-slate-900 bg-white"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isSubmittingComplaint}
+                        className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 cursor-pointer shadow-sm"
+                      >
+                        <Mail className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>{isSubmittingComplaint ? "Routing Ticket..." : "Submit to Enrico"}</span>
+                      </button>
+                    </form>
+
+                    {/* Admin Ticket Dashboard if current user is Enrico */}
+                    {currentUser?.email === "andayaenrico55@gmail.com" && (
+                      <div className="pt-4 mt-4 border-t border-dashed border-slate-200 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-mono font-bold text-slate-700">Admin Live Tickets ({complaints.filter(c => !c.resolved).length})</span>
+                          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[8px] uppercase tracking-wider font-mono rounded font-bold">Secure Access</span>
+                        </div>
+
+                        <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                          {complaints.length === 0 ? (
+                            <p className="text-[10px] text-slate-400 font-mono text-center py-2">No active complaints found.</p>
+                          ) : (
+                            complaints.map((ticket) => (
+                              <div key={ticket.id} className={`p-3 rounded-xl border text-[10px] space-y-1.5 ${ticket.resolved ? "bg-slate-50 border-slate-100 opacity-60" : "bg-emerald-50/50 border-emerald-100"}`}>
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-slate-900 truncate max-w-[120px]" title={ticket.customerName}>{ticket.customerName}</span>
+                                  <span className="text-[8px] font-mono text-slate-400">{ticket.timestamp}</span>
+                                </div>
+                                <p className="text-slate-500 font-mono text-[9px] truncate">{ticket.customerEmail}</p>
+                                <p className="font-bold text-slate-800">Subject: {ticket.subject}</p>
+                                <p className="text-slate-600 font-sans leading-normal bg-white p-2 rounded border border-slate-100 whitespace-pre-line">{ticket.message}</p>
+                                
+                                {!ticket.resolved && (
+                                  <button
+                                    onClick={() => handleResolveComplaint(ticket.id)}
+                                    className="w-full mt-1.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[9px] font-bold font-mono transition"
+                                  >
+                                    Mark as Resolved & Email Customer
+                                  </button>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                 </div>
@@ -1431,9 +2043,100 @@ export default function App() {
             {/* TAB 4: REAL-TIME INVENTORY MANAGEMENT DASHBOARD & AUDIT */}
             {activeTab === "dashboard" && (
               <div id="dashboard-view" className="space-y-8">
-                
-                {/* Dashboard statistics panel */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {!isDashboardUnlocked ? (
+                  <div className="max-w-md mx-auto bg-white border border-slate-100 rounded-3xl p-8 shadow-sm space-y-6 my-12">
+                    <div className="text-center space-y-2">
+                      <div className="p-3.5 bg-emerald-50 text-emerald-600 rounded-2xl w-fit mx-auto">
+                        <Lock className="w-8 h-8 animate-bounce" />
+                      </div>
+                      <h3 className="font-display font-bold text-lg text-slate-950">Merchant Partner Authentication</h3>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        Access is restricted to authorized partners. Enter your admin password to manage inventory, update formulations, and view financial audits.
+                      </p>
+                    </div>
+
+                    <form onSubmit={(e) => {
+                      e.preventDefault();
+                      if (inputPassword === adminPassword) {
+                        setIsDashboardUnlocked(true);
+                        setInputPassword("");
+                        addSystemAlert("success", "Welcome back, Enrico! Dashboard unlocked.");
+                      } else {
+                        addSystemAlert("warning", "Access denied. Invalid admin password.");
+                      }
+                    }} className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Admin Password</label>
+                        <div className="relative">
+                          <input 
+                            type={showPassword ? "text" : "password"}
+                            required
+                            placeholder="Enter password..."
+                            value={inputPassword}
+                            onChange={(e) => setInputPassword(e.target.value)}
+                            className="w-full text-xs p-3.5 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 font-mono pr-12 text-slate-900 bg-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3.5 top-3.5 text-xs text-slate-400 hover:text-slate-600 font-semibold cursor-pointer"
+                          >
+                            {showPassword ? "Hide" : "Show"}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-[10px] text-slate-400 font-mono">Clue: <strong className="text-emerald-700">admin123</strong></span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForgotStep("verify");
+                            setForgotEmail("");
+                            setForgotAnswer("");
+                            setForgotNewPass("");
+                            setShowForgotPassword(true);
+                          }}
+                          className="text-emerald-600 hover:text-emerald-700 font-semibold underline cursor-pointer"
+                        >
+                          Forgot Password?
+                        </button>
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center space-x-1.5 cursor-pointer"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Unlock Admin Console</span>
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  <>
+                    {/* Header and Locker */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                      <div>
+                        <h3 className="font-display font-bold text-slate-900 text-lg flex items-center space-x-2">
+                          <Unlock className="w-5 h-5 text-emerald-600" />
+                          <span>Merchant Inventory & Audit Console</span>
+                        </h3>
+                        <p className="text-xs text-slate-500">Live formulation stock levels, automated order queues, and sales ledger audits</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setIsDashboardUnlocked(false);
+                          addSystemAlert("info", "Console locked successfully.");
+                        }}
+                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all self-start sm:self-auto border border-slate-200 cursor-pointer"
+                      >
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>Lock Console</span>
+                      </button>
+                    </div>
+
+                    {/* Dashboard statistics panel */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   
                   <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm flex items-center space-x-4">
                     <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
@@ -1578,6 +2281,8 @@ export default function App() {
                   </div>
 
                 </div>
+                </>
+                )}
 
               </div>
             )}
@@ -1612,6 +2317,633 @@ export default function App() {
                   <p className="pt-2 text-[10px] text-slate-500 font-mono text-center">
                     Website developed and created by Usagyuun VTuber a.k.a Mark David Valmores. All rights reserved.
                   </p>
+                </div>
+
+              </div>
+            )}
+
+            {/* TAB 6: REDDIT-LIKE FORUMS COMMUNITY */}
+            {activeTab === "community" && (
+              <div id="community-forums-view" className="space-y-6">
+                
+                {/* Community Feed Header Banner */}
+                <div className="bg-gradient-to-r from-teal-800 via-emerald-800 to-slate-900 rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="space-y-1">
+                    <span className="text-[10px] uppercase tracking-widest font-mono text-emerald-300 font-semibold bg-emerald-500/20 px-2.5 py-1 rounded-full border border-emerald-400/35">
+                      Live Herbalist Community
+                    </span>
+                    <h2 className="text-2xl md:text-3xl font-display font-bold tracking-tight text-white">
+                      Love Herbal Forums
+                    </h2>
+                    <p className="text-xs text-emerald-100/80 leading-normal max-w-md">
+                      Discuss formulations, ask dosage questions, share organic recipes, and upvote/downvote topics in real-time.
+                    </p>
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      if (!currentUser) {
+                        setAuthTab("login");
+                        setShowAuthModal(true);
+                        addSystemAlert("warning", "Please sign in to start a thread.");
+                      } else {
+                        setShowCreatePost(!showCreatePost);
+                      }
+                    }}
+                    className="px-5 py-3 bg-white hover:bg-emerald-50 text-emerald-950 text-xs font-bold rounded-xl shadow-md transition-all flex items-center space-x-1.5 shrink-0 self-stretch md:self-auto justify-center cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4 text-emerald-700" />
+                    <span>{showCreatePost ? "Collapse Creator" : "Create New Topic"}</span>
+                  </button>
+                </div>
+
+                {/* Collapsible New Post Creator */}
+                <AnimatePresence>
+                  {showCreatePost && currentUser && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm overflow-hidden space-y-4"
+                    >
+                      <h3 className="font-display font-bold text-slate-950 text-sm flex items-center space-x-1.5 pb-2 border-b border-slate-150">
+                        <Leaf className="w-4 h-4 text-emerald-600" />
+                        <span>Start a New Wellness Discussion Thread</span>
+                      </h3>
+
+                      <form onSubmit={handleCreatePost} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-1">
+                          <label className="text-[10px] uppercase font-mono font-bold text-slate-500 block mb-1">Topic Title</label>
+                          <input 
+                            type="text"
+                            required
+                            value={newPostTitle}
+                            onChange={(e) => setNewPostTitle(e.target.value)}
+                            placeholder="e.g., Banaba tea completely cured my bloating!"
+                            className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 font-medium text-slate-900 bg-white"
+                          />
+                        </div>
+
+                        <div className="md:col-span-1">
+                          <label className="text-[10px] uppercase font-mono font-bold text-slate-500 block mb-1">Forum Category</label>
+                          <select
+                            value={newPostCategory}
+                            onChange={(e) => setNewPostCategory(e.target.value)}
+                            className="w-full text-xs p-3.5 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 font-medium text-slate-900 bg-white"
+                          >
+                            <option value="General Tips">General Tips</option>
+                            <option value="Herbal Tips">Herbal Tips</option>
+                            <option value="Glowtah Benefits">Glowtah Benefits</option>
+                            <option value="Capsules">Capsules</option>
+                          </select>
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="text-[10px] uppercase font-mono font-bold text-slate-500 block mb-1">Detailed Discussion / Body</label>
+                          <textarea
+                            required
+                            rows={4}
+                            value={newPostContent}
+                            onChange={(e) => setNewPostContent(e.target.value)}
+                            placeholder="Describe your health formulation experiences or ask the community a question..."
+                            className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 font-medium text-slate-900 bg-white"
+                          />
+                        </div>
+
+                        <div className="md:col-span-2 flex justify-end space-x-2 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowCreatePost(false)}
+                            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold rounded-lg shadow cursor-pointer"
+                          >
+                            Post Thread
+                          </button>
+                        </div>
+                      </form>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Category filters list */}
+                <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-thin">
+                  <span className="text-[10px] uppercase font-mono font-bold text-slate-400 mr-2">Filter category:</span>
+                  {["All", "General Tips", "Herbal Tips", "Glowtah Benefits", "Capsules"].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setCommunityCategoryFilter(cat)}
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition ${
+                        communityCategoryFilter === cat 
+                          ? "bg-slate-900 border-slate-900 text-white" 
+                          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Main Forum topics grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  
+                  {/* Discussions stream (8 columns) */}
+                  <div className="lg:col-span-8 space-y-4">
+                    {posts.length === 0 ? (
+                      <div className="bg-white border border-slate-100 rounded-3xl p-12 shadow-sm text-center">
+                        <Globe className="w-12 h-12 text-slate-300 mx-auto mb-3 animate-pulse" />
+                        <h4 className="font-display font-semibold text-slate-800">No threads created yet</h4>
+                        <p className="text-xs text-slate-500 mt-1">Be the first to start a conversation in the Love Herbal community!</p>
+                      </div>
+                    ) : (
+                      posts
+                        .filter(p => communityCategoryFilter === "All" || p.category === communityCategoryFilter)
+                        .map((post) => {
+                          const netScore = post.upvotes.length - post.downvotes.length;
+                          const hasUpvoted = currentUser && post.upvotes.includes(currentUser.email);
+                          const hasDownvoted = currentUser && post.downvotes.includes(currentUser.email);
+                          const isFollowed = currentUser && currentUser.following.includes(post.authorEmail);
+                          const isAuthorCurrent = currentUser && currentUser.email === post.authorEmail;
+
+                          return (
+                            <div key={post.id} className="bg-white border border-slate-100 rounded-3xl shadow-sm p-5 flex gap-4 hover:border-slate-200 transition-all">
+                              
+                              {/* Reddit-like Upvote/Downvote panel */}
+                              <div className="flex flex-col items-center bg-slate-50/50 rounded-2xl py-2 px-2.5 h-fit select-none">
+                                <button
+                                  onClick={() => handleVotePost(post.id, 'up')}
+                                  className={`p-1 hover:bg-slate-200 rounded transition ${hasUpvoted ? "text-emerald-600 bg-emerald-50 font-bold" : "text-slate-400"}`}
+                                  title="Upvote formulation discussion"
+                                >
+                                  <ChevronUp className="w-5 h-5 font-bold" />
+                                </button>
+                                <span className={`text-xs font-mono font-bold my-1 ${netScore > 0 ? "text-emerald-700" : netScore < 0 ? "text-rose-600" : "text-slate-600"}`}>
+                                  {netScore > 0 ? `+${netScore}` : netScore}
+                                </span>
+                                <button
+                                  onClick={() => handleVotePost(post.id, 'down')}
+                                  className={`p-1 hover:bg-slate-200 rounded transition ${hasDownvoted ? "text-rose-600 bg-rose-50 font-bold" : "text-slate-400"}`}
+                                  title="Downvote"
+                                >
+                                  <ChevronDown className="w-5 h-5 font-bold" />
+                                </button>
+                              </div>
+
+                              {/* Discussion Content Column */}
+                              <div className="flex-1 space-y-2 text-left">
+                                
+                                {/* User Meta and category info */}
+                                <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100">
+                                  <div className="flex items-center space-x-2">
+                                    <img 
+                                      src={post.authorAvatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(post.authorName)}`} 
+                                      alt={post.authorName} 
+                                      className="w-6 h-6 rounded-full border border-slate-100 object-cover"
+                                    />
+                                    <div className="flex flex-col">
+                                      <div className="flex items-center space-x-1">
+                                        <span className="text-xs font-bold text-slate-800">{post.authorName}</span>
+                                        {post.authorEmail === "andayaenrico55@gmail.com" && (
+                                          <span className="bg-emerald-100 text-emerald-800 font-mono font-bold text-[8px] uppercase px-1 py-0.2 rounded">
+                                            Admin Partner
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span className="text-[9px] text-slate-400 font-mono">{post.timestamp}</span>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center space-x-1.5">
+                                    <span className="bg-slate-100 text-slate-700 font-mono font-medium text-[9px] px-2.5 py-0.5 rounded-full">
+                                      {post.category}
+                                    </span>
+                                    
+                                    {/* Real-time Follow toggle button */}
+                                    {currentUser && !isAuthorCurrent && (
+                                      <button
+                                        onClick={() => handleFollowToggle(post.authorEmail)}
+                                        className={`px-2 py-0.5 rounded text-[9px] font-bold font-mono transition-all ${
+                                          isFollowed 
+                                            ? "bg-slate-100 text-slate-500 hover:bg-slate-200" 
+                                            : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                        }`}
+                                      >
+                                        {isFollowed ? "✓ Following" : "+ Follow"}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Title and text body */}
+                                <div className="space-y-1">
+                                  <h4 className="font-display font-bold text-slate-900 text-sm hover:text-emerald-700 transition cursor-pointer" onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)}>
+                                    {post.title}
+                                  </h4>
+                                  <p className={`text-xs text-slate-600 leading-relaxed whitespace-pre-line ${expandedPostId === post.id ? "" : "line-clamp-2"}`}>
+                                    {post.content}
+                                  </p>
+                                  {post.content.length > 150 && (
+                                    <button 
+                                      onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)}
+                                      className="text-[10px] text-emerald-700 font-semibold uppercase hover:underline"
+                                    >
+                                      {expandedPostId === post.id ? "Show less" : "Read full thread"}
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* Emoji Reactions Counter and trigger buttons */}
+                                <div className="flex items-center flex-wrap gap-1.5 pt-2">
+                                  {["👍", "❤️", "🌿", "😮", "🔥"].map((emoji) => {
+                                    const rects = post.reactions[emoji] || [];
+                                    const userReacted = currentUser && rects.includes(currentUser.email);
+                                    return (
+                                      <button
+                                        key={emoji}
+                                        onClick={() => handleReactPost(post.id, emoji)}
+                                        className={`px-2.5 py-1 rounded-full text-xs font-mono transition flex items-center space-x-1 ${
+                                          userReacted 
+                                            ? "bg-emerald-50 border border-emerald-200 text-emerald-800" 
+                                            : "bg-slate-50 border border-slate-150 text-slate-600 hover:bg-slate-100"
+                                        }`}
+                                      >
+                                        <span>{emoji}</span>
+                                        <span className="font-bold text-[10px]">{rects.length}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+
+                                {/* Comments Section Drawer toggle */}
+                                <div className="pt-2">
+                                  <button
+                                    onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)}
+                                    className="text-xs text-slate-500 font-medium hover:text-slate-800 transition flex items-center space-x-1"
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                    <span>{post.comments.length} Comments</span>
+                                  </button>
+
+                                  {expandedPostId === post.id && (
+                                    <div className="mt-4 pt-4 border-t border-slate-100 space-y-3 bg-slate-50/50 p-3.5 rounded-2xl border border-slate-100">
+                                      <div className="space-y-3">
+                                        {post.comments.length === 0 ? (
+                                          <p className="text-[10px] text-slate-400 font-mono text-center py-2">No comments posted yet. Share your feedback below!</p>
+                                        ) : (
+                                          post.comments.map((comment) => (
+                                            <div key={comment.id} className="flex gap-2.5 text-xs text-slate-700 bg-white p-3 rounded-xl border border-slate-100 shadow-xs">
+                                              <img 
+                                                src={comment.authorAvatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(comment.authorName)}`} 
+                                                alt={comment.authorName} 
+                                                className="w-5 h-5 rounded-full object-cover shrink-0 mt-0.5 border"
+                                              />
+                                              <div className="flex-1 space-y-1 text-left">
+                                                <div className="flex justify-between items-center text-[10px]">
+                                                  <span className="font-bold text-slate-900">{comment.authorName}</span>
+                                                  <span className="text-slate-400 font-mono">{comment.timestamp}</span>
+                                                </div>
+                                                <p className="leading-relaxed text-slate-600 font-sans">{comment.content}</p>
+                                              </div>
+                                            </div>
+                                          ))
+                                        )}
+                                      </div>
+
+                                      {/* Comment writing box */}
+                                      <div className="pt-2 flex gap-2">
+                                        <input 
+                                          type="text"
+                                          placeholder={currentUser ? "Write an reply..." : "Sign in to add a comment"}
+                                          disabled={!currentUser}
+                                          value={newCommentText[post.id] || ""}
+                                          onChange={(e) => setNewCommentText(prev => ({ ...prev, [post.id]: e.target.value }))}
+                                          className="flex-1 bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-emerald-500 font-medium"
+                                        />
+                                        <button
+                                          disabled={!currentUser || !(newCommentText[post.id] || "").trim()}
+                                          onClick={() => handleCommentPost(post.id)}
+                                          className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
+                                        >
+                                          Reply
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+
+                              </div>
+
+                            </div>
+                          );
+                        })
+                    )}
+                  </div>
+
+                  {/* Hot stats sidebar (4 columns) */}
+                  <div className="lg:col-span-4 space-y-6">
+                    
+                    {/* Live follow list / verified partners widget */}
+                    <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-4 text-left">
+                      <div className="border-b border-slate-100 pb-3">
+                        <h4 className="font-display font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center space-x-1.5">
+                          <Users className="w-4 h-4 text-emerald-600" />
+                          <span>Wellness Professionals</span>
+                        </h4>
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">Meet & follow registered herbal specialists</p>
+                      </div>
+
+                      <div className="space-y-3">
+                        {allProfiles.length === 0 ? (
+                          <p className="text-[10px] text-slate-400 font-mono text-center">No profiles found.</p>
+                        ) : (
+                          allProfiles.slice(0, 5).map((profile) => {
+                            const followersCount = allProfiles.filter(p => p.following.includes(profile.email)).length;
+                            const isFollowedByMe = currentUser && currentUser.following.includes(profile.email);
+                            const isMe = currentUser && currentUser.email === profile.email;
+
+                            return (
+                              <div key={profile.email} className="flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 transition border border-transparent hover:border-slate-100">
+                                <div className="flex items-center space-x-2">
+                                  <img 
+                                    src={profile.avatar} 
+                                    alt={profile.username} 
+                                    className="w-7 h-7 rounded-full object-cover border"
+                                  />
+                                  <div className="flex flex-col text-left">
+                                    <span className="text-xs font-bold text-slate-800 truncate max-w-[110px]">{profile.username}</span>
+                                    <span className="text-[9px] text-slate-400 font-mono font-medium">{followersCount} followers</span>
+                                  </div>
+                                </div>
+
+                                {currentUser && !isMe && (
+                                  <button
+                                    onClick={() => handleFollowToggle(profile.email)}
+                                    className={`px-3 py-1 rounded-xl text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                                      isFollowedByMe 
+                                        ? "bg-slate-100 text-slate-500 hover:bg-slate-200" 
+                                        : "bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs shadow-emerald-600/10"
+                                    }`}
+                                  >
+                                    {isFollowedByMe ? "✓" : "+ Follow"}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Community rules widget */}
+                    <div className="bg-emerald-50 rounded-3xl p-6 border border-emerald-100 space-y-3 text-left">
+                      <span className="font-bold text-xs uppercase tracking-wider font-mono text-emerald-800">Forums Code of Conduct</span>
+                      <ul className="space-y-1.5 text-xs text-emerald-900 leading-normal font-sans">
+                        <li>🌿 **Sourced by Enrico**: Only advocate traditional organic extracts.</li>
+                        <li>🤝 **No Spams**: Respect dosing questions and partner opinions.</li>
+                        <li>🛡️ **Secure Orders**: Never share Gcash receipts or OR numbers in discussion posts.</li>
+                        <li>📌 **Admin Power**: Complaints/scams go instantly to **andayaenrico55@gmail.com**.</li>
+                      </ul>
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+            {/* TAB 7: REAL-TIME MESSENGER GROUP CHATS */}
+            {activeTab === "messenger" && (
+              <div id="messenger-chats-view" className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[650px]">
+                
+                {/* Left Panel: Active GCs & User Network (4 Columns) */}
+                <div className="lg:col-span-4 bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden flex flex-col h-full">
+                  
+                  {/* Channels panel header */}
+                  <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                    <div className="flex flex-col text-left">
+                      <span className="text-xs uppercase font-mono tracking-wider font-bold text-emerald-400">Wellness Messenger</span>
+                      <span className="text-sm font-bold font-display leading-none mt-1 text-white">Direct GC Group Chats</span>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        if (!currentUser) {
+                          setAuthTab("login");
+                          setShowAuthModal(true);
+                          addSystemAlert("warning", "Please sign in to open a new group chat.");
+                        } else {
+                          setShowCreateGcModal(true);
+                        }
+                      }}
+                      className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition"
+                      title="New GC Group Chat"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Channel stream items */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-2 max-h-[300px] border-b border-slate-150">
+                    <span className="text-[9px] uppercase font-mono font-bold text-slate-400 tracking-wider block mb-2 px-1 text-left">Active Chatrooms</span>
+                    {groupChats.length === 0 ? (
+                      <p className="text-[10px] text-slate-400 font-mono text-center py-4">No active GCs yet.</p>
+                    ) : (
+                      groupChats.map((chat) => {
+                        const isActive = activeGcId === chat.id;
+                        const isMember = currentUser && chat.memberEmails.includes(currentUser.email);
+
+                        return (
+                          <div
+                            key={chat.id}
+                            className={`p-3 rounded-2xl text-left border transition-all cursor-pointer ${
+                              isActive 
+                                ? "bg-emerald-50 border-emerald-200" 
+                                : "bg-slate-50/50 border-slate-100 hover:bg-slate-50"
+                            }`}
+                            onClick={() => {
+                              if (isMember || chat.id === "gc-general") {
+                                setActiveGcId(chat.id);
+                              } else {
+                                handleJoinGC(chat.id);
+                              }
+                            }}
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-bold text-slate-800 truncate max-w-[140px]">{chat.name}</span>
+                              <span className="text-[8px] font-mono bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded-full">
+                                {chat.memberEmails.length} online
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-1 truncate">{chat.description}</p>
+                            
+                            {!isMember && chat.id !== "gc-general" && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleJoinGC(chat.id);
+                                }}
+                                className="w-full mt-2 py-1 bg-slate-900 hover:bg-slate-800 text-white text-[9px] font-bold font-mono rounded-lg transition cursor-pointer"
+                              >
+                                Join Group Chat
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Live user follows section in Messenger panel */}
+                  <div className="p-4 flex-1 overflow-y-auto space-y-3 bg-slate-50/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] uppercase font-mono font-bold text-slate-400 tracking-wider block px-1">Social Follower Graph</span>
+                      <span className="text-[8px] font-mono text-emerald-700 bg-emerald-100 px-2 py-0.2 rounded uppercase font-semibold">Live User Profiles</span>
+                    </div>
+
+                    <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                      {allProfiles.map((p) => {
+                        const isMe = currentUser && currentUser.email === p.email;
+                        const isFollowedByMe = currentUser && currentUser.following.includes(p.email);
+                        const followersCount = allProfiles.filter(other => other.following.includes(p.email)).length;
+
+                        return (
+                          <div key={p.email} className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-100 text-[10px]">
+                            <div className="flex items-center space-x-1.5 min-w-0">
+                              <img src={p.avatar} alt={p.username} className="w-6 h-6 rounded-full object-cover shrink-0 border" />
+                              <div className="flex flex-col text-left min-w-0">
+                                <span className="font-bold text-slate-800 truncate" title={p.username}>{p.username}</span>
+                                <span className="text-[8px] text-slate-400 truncate">{followersCount} followers</span>
+                              </div>
+                            </div>
+
+                            {currentUser && !isMe && (
+                              <button
+                                onClick={() => handleFollowToggle(p.email)}
+                                className={`px-2 py-0.5 rounded font-mono font-bold shrink-0 text-[8px] cursor-pointer ${isFollowedByMe ? "bg-slate-100 text-slate-500" : "bg-emerald-600 text-white"}`}
+                              >
+                                {isFollowedByMe ? "✓" : "+ Follow"}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Right Panel: Active GC Conversation (8 Columns) */}
+                <div className="lg:col-span-8 bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden flex flex-col h-full">
+                  {(() => {
+                    const selectedGc = groupChats.find(g => g.id === activeGcId);
+                    if (!selectedGc) {
+                      return (
+                        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50">
+                          <MessageCircle className="w-12 h-12 text-slate-300 mb-3 animate-bounce" />
+                          <h4 className="font-display font-semibold text-slate-800">Select or Join a Group Chat</h4>
+                          <p className="text-xs text-slate-500 mt-1">Real-time herbal wellness messages will populate here instantly.</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <>
+                        {/* Conversation Header */}
+                        <div className="p-4 bg-gradient-to-r from-emerald-800 to-teal-900 text-white flex justify-between items-center border-b border-slate-200">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-full bg-emerald-700 border border-emerald-500/20 flex items-center justify-center text-sm font-bold font-mono text-white">
+                              {selectedGc.name.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="text-left">
+                              <h4 className="text-sm font-bold font-display leading-tight text-white">{selectedGc.name}</h4>
+                              <p className="text-[10px] text-emerald-200/90 font-mono mt-0.5 truncate max-w-[280px]" title={selectedGc.description}>{selectedGc.description}</p>
+                            </div>
+                          </div>
+
+                          <div className="text-[10px] text-emerald-100 font-mono text-right bg-white/10 px-2.5 py-1 rounded-full">
+                            Members: {selectedGc.memberEmails.length} online
+                          </div>
+                        </div>
+
+                        {/* Message Stream */}
+                        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
+                          {selectedGc.messages.length === 0 ? (
+                            <div className="text-center py-12 text-slate-400 text-xs font-mono">
+                              No messages in this chat. Start the conversation!
+                            </div>
+                          ) : (
+                            selectedGc.messages.map((msg, idx) => {
+                              const isMe = currentUser && msg.senderEmail === currentUser.email;
+
+                              return (
+                                <div key={idx} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                                  <div className="flex items-start space-x-2 max-w-[80%]">
+                                    {!isMe && (
+                                      <img 
+                                        src={msg.senderAvatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(msg.senderName)}`} 
+                                        alt={msg.senderName} 
+                                        className="w-7 h-7 rounded-full object-cover shrink-0 border mt-3"
+                                      />
+                                    )}
+
+                                    <div className="flex flex-col">
+                                      {!isMe && (
+                                        <span className="text-[9px] text-slate-500 font-bold ml-1 text-left mb-0.5">
+                                          {msg.senderName}
+                                        </span>
+                                      )}
+                                      <div className={`p-3.5 rounded-2xl text-xs leading-relaxed text-left shadow-xs ${
+                                        isMe 
+                                          ? "bg-slate-900 text-white rounded-tr-none" 
+                                          : "bg-white border border-slate-100 text-slate-800 rounded-tl-none"
+                                      }`}>
+                                        <p>{msg.content}</p>
+                                        <span className="text-[8px] text-slate-400 text-right block mt-1 font-mono leading-none">
+                                          {msg.timestamp}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {isMe && (
+                                      <img 
+                                        src={msg.senderAvatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(msg.senderName)}`} 
+                                        alt={msg.senderName} 
+                                        className="w-7 h-7 rounded-full object-cover shrink-0 border mt-3"
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+
+                        {/* Message Input Footer */}
+                        <form onSubmit={handleSendGCMessage} className="p-4 bg-white border-t border-slate-100 flex items-center space-x-2">
+                          <input 
+                            type="text"
+                            value={chatInputMessage}
+                            onChange={(e) => setChatInputMessage(e.target.value)}
+                            placeholder={currentUser ? `Send real-time chat message to ${selectedGc.name}...` : "Please sign in to chat"}
+                            disabled={!currentUser}
+                            className="flex-1 bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-emerald-500 font-medium"
+                          />
+                          <button
+                            type="submit"
+                            disabled={!currentUser || !chatInputMessage.trim()}
+                            className="px-5 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-sm transition disabled:opacity-50 cursor-pointer"
+                          >
+                            Send
+                          </button>
+                        </form>
+                      </>
+                    );
+                  })()}
                 </div>
 
               </div>
@@ -1996,6 +3328,419 @@ export default function App() {
                 </button>
               </div>
 
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* SECURE FORGOT PASSWORD MODAL */}
+      <AnimatePresence>
+        {showForgotPassword && (
+          <div id="forgot-password-overlay" className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-6 relative overflow-hidden text-slate-900"
+            >
+              {/* Close Button */}
+              <button 
+                onClick={() => setShowForgotPassword(false)}
+                className="absolute right-4 top-4 p-1 hover:bg-slate-100 rounded text-slate-400 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center space-y-1">
+                <ShieldCheck className="w-10 h-10 text-emerald-600 mx-auto" />
+                <h3 className="font-display font-bold text-lg text-slate-950">Password Recovery Console</h3>
+                <p className="text-xs text-slate-500">Authorized Merchant Partner Credentials Reset</p>
+              </div>
+
+              {/* Progress dots */}
+              <div className="flex justify-center space-x-2 pb-2">
+                <div className={`h-1.5 w-10 rounded-full transition-all ${forgotStep === "verify" ? "bg-emerald-600" : "bg-slate-200"}`}></div>
+                <div className={`h-1.5 w-10 rounded-full transition-all ${forgotStep === "reset" ? "bg-emerald-600" : "bg-slate-200"}`}></div>
+                <div className={`h-1.5 w-10 rounded-full transition-all ${forgotStep === "success" ? "bg-emerald-600" : "bg-slate-200"}`}></div>
+              </div>
+
+              {forgotStep === "verify" && (
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  if (forgotEmail.trim().toLowerCase() === "andayaenrico55@gmail.com") {
+                    setForgotStep("reset");
+                    addSystemAlert("info", "Partner email verified. Please answer security question.");
+                  } else {
+                    addSystemAlert("warning", "Authorized partner email not found in records.");
+                  }
+                }} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Merchant Partner Email</label>
+                    <input 
+                      type="email"
+                      required
+                      placeholder="e.g. andayaenrico55@gmail.com"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-900 bg-white"
+                    />
+                    <p className="text-[10px] text-slate-400 leading-normal">
+                      Hint: The authorized merchant email is available in Enrico's Heritage or checkout notes (e.g. andayaenrico55@gmail.com).
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
+                  >
+                    Verify Account Email
+                  </button>
+                </form>
+              )}
+
+              {forgotStep === "reset" && (
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const cleanAnswer = forgotAnswer.trim().replace(/[^0-9]/g, '');
+                  if (cleanAnswer === "09560333111") {
+                    if (forgotNewPass.trim().length < 4) {
+                      addSystemAlert("warning", "Password must be at least 4 characters long.");
+                      return;
+                    }
+                    setAdminPassword(forgotNewPass);
+                    setForgotStep("success");
+                    addSystemAlert("success", "Merchant credentials successfully updated!");
+                  } else {
+                    addSystemAlert("warning", "Verification failed. Security question answer is incorrect.");
+                  }
+                }} className="space-y-4">
+                  <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                    <strong>Security Verification:</strong> Prove ownership of the Love Herbal merchant account to reset credentials.
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Security Question: What is Enrico's registered 11-digit GCash mobile number?
+                    </label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="e.g. 09560333111"
+                      value={forgotAnswer}
+                      onChange={(e) => setForgotAnswer(e.target.value)}
+                      className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-900 bg-white font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Enter New Admin Password</label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="Enter new secure password..."
+                      value={forgotNewPass}
+                      onChange={(e) => setForgotNewPass(e.target.value)}
+                      className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-900 bg-white font-mono"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
+                  >
+                    Reset & Apply New Password
+                  </button>
+                </form>
+              )}
+
+              {forgotStep === "success" && (
+                <div className="space-y-4 text-center">
+                  <div className="p-3 bg-emerald-50 text-emerald-600 rounded-full w-fit mx-auto">
+                    <Check className="w-8 h-8 animate-bounce" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-slate-900 text-sm">Credentials Updated Successfully</h4>
+                    <p className="text-xs text-slate-500">
+                      You have securely updated the merchant partner credentials. Your new password is now active.
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-2xl font-mono text-xs border border-slate-100 flex items-center justify-between">
+                    <span className="text-slate-400">NEW PASSWORD:</span>
+                    <strong className="text-emerald-800">{adminPassword}</strong>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowForgotPassword(false);
+                      setForgotStep("verify");
+                    }}
+                    className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition cursor-pointer"
+                  >
+                    Return to Login
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* REAL-TIME AUTHENTICATION MODAL (SIGN IN / REGISTER / AVATARS) */}
+      <AnimatePresence>
+        {showAuthModal && (
+          <div id="realtime-auth-overlay" className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-6 relative text-slate-900"
+            >
+              {/* Close Button */}
+              <button 
+                onClick={() => setShowAuthModal(false)}
+                className="absolute right-4 top-4 p-1 hover:bg-slate-100 rounded text-slate-400 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center space-y-1">
+                <Leaf className="w-8 h-8 text-emerald-600 mx-auto" />
+                <h3 className="font-display font-bold text-lg text-slate-950">Love Herbal Account</h3>
+                <p className="text-xs text-slate-500">Live social interactions, group chats & profile follows</p>
+              </div>
+
+              {/* Login / Register tabs switcher */}
+              <div className="grid grid-cols-2 bg-slate-100 p-1 rounded-2xl">
+                <button
+                  type="button"
+                  onClick={() => setAuthTab("login")}
+                  className={`py-2 text-xs font-semibold rounded-xl transition-all ${
+                    authTab === "login" ? "bg-white text-slate-900 shadow-sm font-bold" : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuthTab("register")}
+                  className={`py-2 text-xs font-semibold rounded-xl transition-all ${
+                    authTab === "register" ? "bg-white text-slate-900 shadow-sm font-bold" : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  Register Profile
+                </button>
+              </div>
+
+              {/* Quick fill panel for testers */}
+              {authTab === "login" && (
+                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-3.5 space-y-2 text-left">
+                  <div className="flex items-center space-x-1 text-[10px] font-bold text-emerald-800 font-mono uppercase">
+                    <span>💡 Merchant Admin Fast Pass</span>
+                  </div>
+                  <p className="text-[10px] text-emerald-700 font-sans leading-normal">
+                    Sign in with the authorized owner email <strong>andayaenrico55@gmail.com</strong> to unlock the Support Tickets dashboard instantly.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthEmail("andayaenrico55@gmail.com");
+                      setAuthPassword(adminPassword);
+                    }}
+                    className="py-1 px-3 bg-white hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold font-mono text-[9px] rounded-lg transition cursor-pointer"
+                  >
+                    Auto-Fill Admin Partner
+                  </button>
+                </div>
+              )}
+
+              <form onSubmit={handleAuthSubmit} className="space-y-4">
+                <div className="space-y-1 text-left">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Email Address</label>
+                  <input 
+                    type="email"
+                    required
+                    placeholder="e.g. andayaenrico55@gmail.com"
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-900 bg-white"
+                  />
+                </div>
+
+                {authTab === "register" && (
+                  <div className="space-y-1 text-left">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Username</label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="e.g. EnricoAndaya55"
+                      value={authUsername}
+                      onChange={(e) => setAuthUsername(e.target.value)}
+                      className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-900 bg-white"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1 text-left">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Password</label>
+                    {authTab === "login" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAuthModal(false);
+                          setShowForgotPassword(true);
+                        }}
+                        className="text-[10px] font-mono text-emerald-600 hover:underline cursor-pointer"
+                      >
+                        Forgot Password?
+                      </button>
+                    )}
+                  </div>
+                  <input 
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-900 bg-white"
+                  />
+                </div>
+
+                {authTab === "register" && (
+                  <>
+                    <div className="space-y-1 text-left">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Short Bio (Optional)</label>
+                      <input 
+                        type="text"
+                        placeholder="Traditional herbal formulation enthusiast."
+                        value={authBio}
+                        onChange={(e) => setAuthBio(e.target.value)}
+                        className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-900 bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1 text-left">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Select Custom VTuber Avatar</label>
+                      <div className="grid grid-cols-5 gap-2">
+                        {["bunny", "panda", "koala", "fox", "bear"].map((seed) => {
+                          const url = `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}`;
+                          const isSelected = authAvatar === url;
+                          return (
+                            <button
+                              key={seed}
+                              type="button"
+                              onClick={() => setAuthAvatar(url)}
+                              className={`p-1.5 rounded-xl border-2 transition-all bg-slate-50 cursor-pointer ${
+                                isSelected ? "border-emerald-600 bg-emerald-50/40" : "border-slate-150 hover:border-slate-300"
+                              }`}
+                            >
+                              <img src={url} alt={seed} className="w-full h-8 object-cover" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
+                >
+                  {authTab === "login" ? "Sign In to Channels" : "Create My Account"}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* CREATE NEW WELLNESS GROUP CHAT MODAL */}
+      <AnimatePresence>
+        {showCreateGcModal && (
+          <div id="create-gc-overlay" className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-6 relative text-slate-900 text-left"
+            >
+              {/* Close Button */}
+              <button 
+                onClick={() => setShowCreateGcModal(false)}
+                className="absolute right-4 top-4 p-1 hover:bg-slate-100 rounded text-slate-400 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="space-y-1">
+                <MessageSquare className="w-8 h-8 text-emerald-600 animate-pulse" />
+                <h3 className="font-display font-bold text-lg text-slate-950">New Wellness Group Chat</h3>
+                <p className="text-xs text-slate-500">Create an interactive channel for your herbal network partners</p>
+              </div>
+
+              <form onSubmit={handleCreateGC} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Group Chat Name</label>
+                  <input 
+                    type="text"
+                    required
+                    placeholder="e.g. Glootah formulation support team"
+                    value={newGcName}
+                    onChange={(e) => setNewGcName(e.target.value)}
+                    className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-900 bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Description / Goal</label>
+                  <textarea
+                    required
+                    rows={2}
+                    placeholder="What topics will be discussed in this channel?"
+                    value={newGcDesc}
+                    onChange={(e) => setNewGcDesc(e.target.value)}
+                    className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-900 bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Pre-Invite Members (Profiles)</label>
+                  <div className="max-h-24 overflow-y-auto border border-slate-200 rounded-xl p-2.5 space-y-1.5 bg-slate-50">
+                    {allProfiles.length === 0 ? (
+                      <p className="text-[10px] text-slate-400 font-mono text-center">No other members registered yet.</p>
+                    ) : (
+                      allProfiles.map((p) => {
+                        const isSelected = newGcMembers.includes(p.email);
+                        return (
+                          <label key={p.email} className="flex items-center space-x-2 text-[11px] text-slate-700 cursor-pointer">
+                            <input 
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setNewGcMembers(prev => [...prev, p.email]);
+                                } else {
+                                  setNewGcMembers(prev => prev.filter(m => m !== p.email));
+                                }
+                              }}
+                              className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            />
+                            <span>{p.username} ({p.email})</span>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer"
+                >
+                  Establish Group Chat
+                </button>
+              </form>
             </motion.div>
           </div>
         )}
