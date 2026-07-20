@@ -1459,7 +1459,7 @@ export default function App() {
                             <span>Authorized Checkout System</span>
                           </div>
                           <p className="text-[10px] text-emerald-800 leading-normal">
-                            Direct automated transfers are processed instantly to GCash wellness fund <strong>CP # 09560333111</strong> or <strong>andayaenrico55@gmail.com</strong>.
+                            Direct automated transfers are processed instantly to GCash wellness fund <strong>CP # 09102225789</strong> or <strong>andayaenrico55@gmail.com</strong>.
                           </p>
                         </div>
 
@@ -1608,7 +1608,7 @@ export default function App() {
                     <div className="bg-white/10 rounded-2xl p-4 space-y-2.5 font-mono text-xs">
                       <div className="flex items-center justify-between">
                         <span className="text-emerald-300">GCash CP #:</span>
-                        <span className="font-bold">09560333111 (Love Herbal)</span>
+                        <span className="font-bold">09102225789 (Love Herbal)</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-emerald-300">Authorized Email:</span>
@@ -1704,7 +1704,7 @@ export default function App() {
                               GCash Transfer Guide
                             </span>
                             <p className="text-[11px] text-amber-900 mt-1.5 font-medium">
-                              Send exactly <strong className="text-emerald-800">₱{getCartTotal()}.00</strong> to GCash <strong>09560333111</strong>
+                              Send exactly <strong className="text-emerald-800">₱{getCartTotal()}.00</strong> to GCash <strong>09102225789</strong>
                             </p>
                           </div>
                           <div className="space-y-1">
@@ -2045,7 +2045,7 @@ export default function App() {
                               <div>Payment Method: {order.paymentMethod}</div>
                               <div>Ref Number: {order.paymentReference || "Awaiting Confirmation"}</div>
                               <div>Merchant Account: andayaenrico55@gmail.com</div>
-                              <div>GCash Account (CP #): 09560333111</div>
+                              <div>GCash Account (CP #): 09102225789</div>
                               {order.shippingAddress && <div>Shipping To: {order.shippingAddress}</div>}
                               {order.trackingNumber && <div>Tracking ID: {order.trackingNumber}</div>}
                               <div>Checkout Date: {new Date(order.date).toLocaleString()}</div>
@@ -2094,7 +2094,7 @@ export default function App() {
                               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mt-2 space-y-2.5">
                                 <div className="text-[10px] text-amber-900 font-bold uppercase tracking-wider">Awaiting GCash Verification</div>
                                 <p className="text-[11px] text-amber-800 leading-normal">
-                                  Please send <strong>₱{order.totalAmount}.00</strong> to GCash <strong>CP # 09560333111</strong> and paste the reference number below to confirm shipment dispatch:
+                                  Please send <strong>₱{order.totalAmount}.00</strong> to GCash <strong>CP # 09102225789</strong> and paste the reference number below to confirm shipment dispatch:
                                 </p>
                                 <div className="flex gap-2">
                                   <input 
@@ -2347,7 +2347,7 @@ export default function App() {
                   <div className="lg:col-span-4 bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-4">
                     <div className="pb-3 border-b border-slate-100">
                       <h4 className="font-display font-bold text-slate-900 text-sm">Real-time Transaction Log</h4>
-                      <p className="text-[10px] text-slate-500 font-mono">Secure merchant account: andayaenrico55@gmail.com (09560333111)</p>
+                      <p className="text-[10px] text-slate-500 font-mono">Secure merchant account: andayaenrico55@gmail.com (09102225789)</p>
                     </div>
 
                     <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
@@ -2403,7 +2403,7 @@ export default function App() {
                   <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 space-y-2 text-emerald-900">
                     <span className="font-semibold block text-sm">Verified Product Catalog:</span>
                     <p>
-                      All products listed in our store are manually verified and officially sourced formulations by Enrico Andaya. We ensure real-time stock tracking and immediate dispatch upon secure purchase via GCash Reference Verification to **CP # 09560333111** or PayPal settlement to <strong>andayaenrico55@gmail.com</strong>.
+                      All products listed in our store are manually verified and officially sourced formulations by Enrico Andaya. We ensure real-time stock tracking and immediate dispatch upon secure purchase via GCash Reference Verification to **CP # 09102225789** or PayPal settlement to <strong>andayaenrico55@gmail.com</strong>.
                     </p>
                   </div>
 
@@ -3080,7 +3080,7 @@ export default function App() {
 
           <div className="flex flex-col md:items-end space-y-1.5 font-mono text-[10px]">
             <div>Authorized Fund Representative: andayaenrico55@gmail.com</div>
-            <div>GCash CP #: 09560333111</div>
+            <div>GCash CP #: 09102225789</div>
             <div>Official Wellness Partner: Enrico Andaya</div>
             <div className="text-emerald-400">© 2026 Love Herbal PH Corp.</div>
           </div>
@@ -3225,7 +3225,7 @@ export default function App() {
                       <span>GCash Real-time Settlement Procedure</span>
                     </div>
                     <p className="text-[10px] text-blue-800 leading-normal">
-                      Send your total order amount of <strong>₱{getCartTotal()}.00</strong> to GCash wellness fund account <strong>CP # 09560333111</strong> (Registered under Love Herbal).
+                      Send your total order amount of <strong>₱{getCartTotal()}.00</strong> to GCash wellness fund account <strong>CP # 09102225789</strong> (Registered under Love Herbal).
                     </p>
                     
                     <div className="space-y-1">
@@ -3385,7 +3385,7 @@ export default function App() {
                   <p className="text-[10px] text-slate-500">by Enrico Andaya</p>
                   <p className="text-[9px] text-slate-500">VTuber Division: Usagyuun / Mark David Valmores</p>
                   <p className="text-[10px] text-slate-600">andayaenrico55@gmail.com</p>
-                  <p className="text-[9px] text-slate-500 font-mono">CP #: 09560333111</p>
+                  <p className="text-[9px] text-slate-500 font-mono">CP #: 09102225789</p>
                 </div>
 
                 <div className="space-y-1 text-[11px] text-slate-700">
@@ -3517,7 +3517,7 @@ export default function App() {
                 <form onSubmit={(e) => {
                   e.preventDefault();
                   const cleanAnswer = forgotAnswer.trim().replace(/[^0-9]/g, '');
-                  if (cleanAnswer === "09560333111") {
+                  if (cleanAnswer === "09102225789") {
                     if (forgotNewPass.trim().length < 4) {
                       addSystemAlert("warning", "Password must be at least 4 characters long.");
                       return;
@@ -3540,7 +3540,7 @@ export default function App() {
                     <input 
                       type="text"
                       required
-                      placeholder="e.g. 09560333111"
+                      placeholder="e.g. 09102225789"
                       value={forgotAnswer}
                       onChange={(e) => setForgotAnswer(e.target.value)}
                       className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-900 bg-white font-mono"

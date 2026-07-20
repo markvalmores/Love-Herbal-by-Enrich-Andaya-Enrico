@@ -767,7 +767,7 @@ app.post("/api/checkout", (req, res) => {
     Payment Method: ${paymentMethod}
     Payment Reference No: ${newTx.paymentReference || "Awaiting Confirmation"}
     Recipient Email: andayaenrico55@gmail.com (Authorized wellness fund merchant account)
-    GCash Account Number (CP #): 09560333111 (Love Herbal)
+    GCash Account Number (CP #): 09102225789 (Love Herbal)
 
     Items Purchased:
     ${itemsSummary.map(i => `- ${i.productName} (Qty: ${i.quantity}) - Php ${i.price * i.quantity}`).join("\n")}
@@ -881,7 +881,7 @@ app.post("/api/chat", async (req, res) => {
     
     If the user asks about customer support, order updates, or GCash payments, provide the official info:
     - Customer Support Email: andayaenrico55@gmail.com
-    - GCash Payment / Phone (CP #): 09560333111
+    - GCash Payment / Phone (CP #): 09102225789
     - Business name: Love Herbal
     Keep your answers concise, clear, and highly engaging.
     Always sign off with: "Stay healthy!" or "Best regards!" or friendly VTuber signature phrases when appropriate.
@@ -890,7 +890,7 @@ app.post("/api/chat", async (req, res) => {
   if (!ai) {
     // Return friendly local response if Gemini API key is not active
     return res.json({
-      reply: `[Local Mode Usagyuun Bot] Yay! Hello there, wellness explorer! Enrico Andaya's herbal products are here to guide your personalized wellness journey. Currently, Moringa Oleifera capsules are excellent for raw energy, while Banaba Leaf tea supports metabolic balance! For customer support, reach out to us at andayaenrico55@gmail.com or CP # 09560333111. Let me know which one you like best. Stay healthy!`
+      reply: `[Local Mode Usagyuun Bot] Yay! Hello there, wellness explorer! Enrico Andaya's herbal products are here to guide your personalized wellness journey. Currently, Moringa Oleifera capsules are excellent for raw energy, while Banaba Leaf tea supports metabolic balance! For customer support, reach out to us at andayaenrico55@gmail.com or CP # 09102225789. Let me know which one you like best. Stay healthy!`
     });
   }
 
