@@ -636,6 +636,7 @@ app.post("/api/complaints/resolve", (req, res) => {
 
 // 1. Get products list
 app.get("/api/products", (req, res) => {
+  console.log("Fetching products...", products);
   res.json({
     products,
     alerts: checkLowStockAlerts()

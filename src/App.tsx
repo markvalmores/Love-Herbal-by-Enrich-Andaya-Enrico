@@ -259,13 +259,13 @@ export default function App() {
   }, [chatMessages]);
 
   const fetchProducts = async () => {
+    console.log("Fetching products from /api/products...");
     try {
-      const res = await fetch("/api/products");
+      const res = await fetch(`${window.location.origin}/api/products`);
       const data = await res.json();
-      if (data.products) {
-        setProducts(data.products);
-        setStockAlerts(data.alerts || []);
-      }
+      console.log("Fetch products response:", data);
+      setProducts(data.products || []);
+      setStockAlerts(data.alerts || []);
     } catch (e) {
       console.error("Error fetching products", e);
     }
