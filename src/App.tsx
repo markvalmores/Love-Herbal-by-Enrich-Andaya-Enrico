@@ -59,7 +59,63 @@ export default function App() {
   // State variables
   const [showTitleScreen, setShowTitleScreen] = useState(true);
   const [activeTab, setActiveTab] = useState<"store" | "cart" | "support" | "portal" | "dashboard" | "about" | "community" | "messenger">("store");
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>([
+    {
+      id: "prod-glowtah",
+      name: "GLOWTAH Herbal Coffee Mix",
+      description: "The 'Pambabae' coffee mix. A powerful blend designed to support skin health, anti-aging, and detoxification while boosting metabolism.",
+      benefits: ["Skin health & glow", "Anti-aging & Detox", "Fat management & metabolism", "Brain & kidney health"],
+      price: 275,
+      image: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=600&auto=format&fit=crop&q=60",
+      stock: 50,
+      category: "Coffee Mix",
+      isExtracted: false
+    },
+    {
+      id: "prod-buffalo",
+      name: "BUFFALO Herbal Coffee Mix",
+      description: "Specially blended for men. Infused with Tongkat Ali and Ginseng to support energy, endurance, and male vitality.",
+      benefits: ["Energy & endurance", "Libido & performance", "Testosterone support", "Immune system health"],
+      price: 275,
+      image: "https://images.unsplash.com/photo-1580915411954-282cb1b0d780?w=600&auto=format&fit=crop&q=60",
+      stock: 45,
+      category: "Coffee Mix",
+      isExtracted: false
+    },
+    {
+      id: "prod-vit-c",
+      name: "Alkaline Vitamin C (90-cap)",
+      description: "90 capsules of premium Alkaline Vitamin C for superior immune support without the acidity.",
+      benefits: ["Immune system strength", "Non-acidic formula", "Powerful antioxidant"],
+      price: 450,
+      image: "https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=600&auto=format&fit=crop&q=60",
+      stock: 30,
+      category: "Capsules",
+      isExtracted: false
+    },
+    {
+      id: "prod-barley",
+      name: "Barley Capsule (90-cap)",
+      description: "Pure Barley grass powder in capsules. A superfood powerhouse for overall cellular health.",
+      benefits: ["Nutrient dense superfood", "Supports digestive health", "Energy booster"],
+      price: 750,
+      image: "https://images.unsplash.com/photo-1616671285410-9a2245367667?w=600&auto=format&fit=crop&q=60",
+      stock: 20,
+      category: "Capsules",
+      isExtracted: false
+    },
+    {
+      id: "prod-gluta",
+      name: "Gluta-Collagen-Carnitine (90-cap)",
+      description: "The ultimate beauty and fitness blend. Combines Glutathione, Collagen, and L-Carnitine for skin and weight support.",
+      benefits: ["Skin whitening & elasticity", "Weight management support", "90 capsules per bottle"],
+      price: 750,
+      image: "https://images.unsplash.com/photo-1626202340534-f958804d38c3?w=600&auto=format&fit=crop&q=60",
+      stock: 15,
+      category: "Capsules",
+      isExtracted: false
+    }
+  ]);
   const [stockAlerts, setStockAlerts] = useState<string[]>([]);
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
   
@@ -234,9 +290,8 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch products and dashboard data on load
+  // Fetch dashboard data on load
   useEffect(() => {
-    fetchProducts();
     fetchDashboardStats();
     
     // Notifications decision from LocalStorage
@@ -257,19 +312,6 @@ export default function App() {
       chatEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [chatMessages]);
-
-  const fetchProducts = async () => {
-    console.log("Fetching products from /api/products...");
-    try {
-      const res = await fetch(`${window.location.origin}/api/products`);
-      const data = await res.json();
-      console.log("Fetch products response:", data);
-      setProducts(data.products || []);
-      setStockAlerts(data.alerts || []);
-    } catch (e) {
-      console.error("Error fetching products", e);
-    }
-  };
 
   const fetchDashboardStats = async () => {
     try {
@@ -791,7 +833,6 @@ export default function App() {
         setCart([]);
         setShowCheckoutModal(false);
         setShowThankYouModal(true);
-        fetchProducts(); // refresh inventory
         fetchDashboardStats(); // update dashboard sales
         addSystemAlert("success", `Payment confirmed! Official OR Receipt issued for ${checkoutName}.`);
         
